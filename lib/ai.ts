@@ -13,8 +13,7 @@ function getGoogleAI(): GoogleGenAI {
   if (!googleAI) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error("GEMINI_API_KEY missing");
-    const model = process.env.GEMINI_MODEL || "gemini-2.0-flash-001";
-    googleAI = new GoogleGenAI({ apiKey, model });
+    googleAI = new GoogleGenAI({ apiKey });
   }
   return googleAI;
 }
