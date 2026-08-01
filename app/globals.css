@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────────────────────
+   Justice AI — global styles & brand utilities
+   Palette: Navy #0f172a (slate-900) base, Gold/Amber accents.
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  --navy-950: #020617;
+  --navy-900: #0f172a;
+  --navy-800: #1e293b;
+  --navy-700: #334155;
+  --gold-400: #fbbf24;
+  --gold-500: #f59e0b;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-navy-50 text-navy-900 antialiased;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Brand gradient text — used on hero title / section eyebrows. */
+.text-brand-gradient {
+  background: linear-gradient(120deg, #f59e0b 0%, #fbbf24 45%, #fde68a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Subtle gold top-border accent. */
+.gold-rule {
+  @apply h-1 w-16 rounded-full bg-gradient-to-r from-gold-500 to-gold-300;
+}
+
+/* Reusable card surface. */
+.card-surface {
+  @apply rounded-2xl border border-navy-200/70 bg-white shadow-card;
+}
+
+.card-surface-dark {
+  @apply rounded-2xl border border-white/10 bg-navy-800 shadow-card;
+}
+
+/* Primary CTA button. */
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gold-500 px-6 py-3 font-semibold text-navy-950 transition-colors hover:bg-gold-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-300 focus-visible:ring-offset-2;
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl border border-navy-300 bg-white px-6 py-3 font-semibold text-navy-800 transition-colors hover:border-gold-400 hover:text-navy-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-300;
+}
+
+.btn-ghost {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-navy-600 transition-colors hover:bg-navy-100 hover:text-navy-900;
+}
+
+/* Section eyebrow label. */
+.eyebrow {
+  @apply text-xs font-semibold uppercase tracking-[0.2em] text-gold-600;
+}
+
+/* Tri-bar "scales of justice" decorative stripe. */
+.justice-stripe {
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--gold-500) 0px,
+    var(--gold-500) 2px,
+    transparent 2px,
+    transparent 8px
+  );
+}
+
+/* Custom scrollbar — subtle, brand-aligned. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-navy-100;
+}
+::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-navy-300;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-navy-400;
+}
+
+/* Chat message fade-in. */
+@keyframes justice-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-up {
+  animation: justice-fade-up 0.25s ease-out both;
+}
