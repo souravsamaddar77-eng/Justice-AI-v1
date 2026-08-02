@@ -14,7 +14,7 @@ export default function CitizenPage() {
   const [analysis, setAnalysis] = useState<AnalyzeResponseBody | null>(null);
   const [error, setError] = useState("");
 
-  async function analyze(text: string, filename: string) {
+  async function analyze(text: string, filename: string, fileBase64?: string) {
     setBusy(true);
     setError("");
     setAnalysis(null);
@@ -22,7 +22,7 @@ export default function CitizenPage() {
       const res = await fetch("/api/analyze-document", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, filename }),
+        body: JSON.stringify({ text, filename, fileBase64 }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: AnalyzeResponseBody = await res.json();

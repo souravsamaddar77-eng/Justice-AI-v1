@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { UploadCloud, FileText, Loader2, ShieldCheck, Lock } from "lucide-react";
+import { UploadCloud, FileText, Loader2, ShieldCheck, Lock, FileType } from "lucide-react";
 
 interface Props {
-  onAnalyze: (text: string, filename: string) => Promise<void>;
+  onAnalyze: (text: string, filename: string, fileBase64?: string) => Promise<void>;
   busy: boolean;
 }
 
@@ -22,7 +22,9 @@ export default function FileUpload({ onAnalyze, busy }: Props) {
       setError("");
       setFile(f);
       let text = "";
-      // Text files: read content for real analysis. Other types: rely on filename (UI demo).
+      let fileBase64: string | undefined;
+
+      // Text files: read content for real analysis
       if (/\.(txt)$/i.test(f.name)) {
         try {
           text = await f.text();
@@ -30,7 +32,17 @@ export default function FileUpload({ onAnalyze, busy }: Props) {
           text = "";
         }
       }
-      await onAnalyze(text, f.name);
+      // PDF files: convert to base64 for server-side extraction
+      else if (/\.(pdf)$/i.test(f.name)) {
+        try {
+          const arrayBuffer = await f.arrayBuffer();
+          fileBase64 = Buffer.from(arrayBuffer).toString("base64");
+        } catch {
+          fileBase64 = undefined;
+        }
+      }
+      // Other types (images, DOC): rely on filename for now (UI demo)
+      await onAnalyze(text, f.name, fileBase64);
     },
     [onAnalyze]
   );
@@ -46,6 +58,8 @@ export default function FileUpload({ onAnalyze, busy }: Props) {
     const f = e.target.files?.[0];
     if (f) void handleFile(f);
   };
+
+  const isPdf = file?.name.toLowerCase().endsWith(".pdf");
 
   return (
     <div className="card-surface p-6">
@@ -83,7 +97,9 @@ export default function FileUpload({ onAnalyze, busy }: Props) {
         <p className="mt-1 text-sm text-navy-500">or click to browse — PDF, PNG, JPG, TXT, DOC</p>
         {file && !busy && (
           <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-xs font-medium text-navy-600 shadow-sm ring-1 ring-navy-200">
-            <FileText className="h-3.5 w-3.5 text-gold-600" /> {file.name}
+            {isPdf ? <FileType className="h-3.5 w-3.5 text-red-500" /> : <FileText className="h-3.5 w-3.5 text-gold-600" />}
+            {file.name}
+            {isPdf && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-600">PDF text will be extracted</span>}
           </span>
         )}
       </div>

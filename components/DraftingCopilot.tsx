@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Wand2, Loader2, Copy, Check, FileText } from "lucide-react";
+import { Wand2, Loader2, Copy, Check, FileText, Download } from "lucide-react";
+import { jsPDF } from "jspdf";
 import type { DocumentType, DraftResponseBody } from "@/types";
 
 const DOC_OPTIONS: { value: DocumentType; label: string }[] = [
@@ -51,6 +52,29 @@ export default function DraftingCopilot() {
     navigator.clipboard.writeText(result.document);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  }
+
+  /** Generate a PDF from the drafted document text. */
+  function downloadPdf() {
+    if (!result) return;
+    const doc = new jsPDF();
+    const lines = doc.splitTextToSize(result.document, 180);
+    let y = 20;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(result.title, 10, y);
+    y += 10;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    for (const line of lines) {
+      if (y > 280) {
+        doc.addPage();
+        y = 20;
+      }
+      doc.text(line, 10, y);
+      y += 5;
+    }
+    doc.save(`${result.title.replace(/\s+/g, "_")}.pdf`);
   }
 
   return (
@@ -135,13 +159,22 @@ export default function DraftingCopilot() {
             </span>
           </div>
           {result && (
-            <button
-              onClick={copyDoc}
-              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-navy-600 hover:bg-navy-100"
-            >
-              {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? "Copied" : "Copy"}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={copyDoc}
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-navy-600 hover:bg-navy-100"
+              >
+                {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? "Copied" : "Copy"}
+              </button>
+              <button
+                onClick={downloadPdf}
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-navy-600 hover:bg-navy-100"
+                title="Download as PDF"
+              >
+                <Download className="h-3.5 w-3.5" /> PDF
+              </button>
+            </div>
           )}
         </div>
 
