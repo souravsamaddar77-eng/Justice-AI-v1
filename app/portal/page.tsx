@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Scale, UserRound, Briefcase, ShieldCheck } from "lucide-react";
 
-export default function PortalGatewayPage() {
+function PortalGatewayContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -147,6 +147,22 @@ export default function PortalGatewayPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-navy-50/40 flex items-center justify-center p-4">
+      <Loader2 className="h-8 w-8 animate-spin text-gold-500" />
+    </div>
+  );
+}
+
+export default function PortalGatewayPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <PortalGatewayContent />
+    </Suspense>
   );
 }
 

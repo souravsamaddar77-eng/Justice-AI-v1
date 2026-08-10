@@ -94,7 +94,7 @@ const WB_SCHEMES: Scheme[] = [
     description:
       "Financial assistance to victims of crime including acid attacks, sexual assault, and other heinous offences. Covers medical expenses, rehabilitation, and interim compensation.",
     category: "Victim Support",
-    link: "https://wb.gov.in/portal/web/guest/victim-compensation-scheme",
+    link: "https://westbengal.nalsa.gov.in/scheme/wb-victim-compensation-scheme-2017-2/",
   },
   {
     id: "wb-2",
@@ -102,7 +102,7 @@ const WB_SCHEMES: Scheme[] = [
     description:
       "Provides dedicated defence counsel for undertrial prisoners who cannot afford legal representation. Ensures effective legal aid at pre-trial, trial, and appellate stages.",
     category: "Criminal Defence",
-    link: "https://westbengal.nalsa.gov.in/ladcs",
+    link: "https://westbengal.nalsa.gov.in/scheme/guidelines-support-poor-prisoners-scheme/",
   },
   {
     id: "wb-3",
@@ -110,7 +110,7 @@ const WB_SCHEMES: Scheme[] = [
     description:
       "Specialized legal assistance for women victims of domestic violence, dowry harassment, sexual assault, and workplace discrimination. Includes counselling and court accompaniment.",
     category: "Women's Rights",
-    link: "https://westbengal.nalsa.gov.in/nari-shakti",
+    link: "https://westbengal.nalsa.gov.in/scheme/nalsas-compensation-scheme-for-women-victims-survivors-of-sexual-assault-other-crimes-2018/",
   },
   {
     id: "wb-4",
@@ -118,7 +118,7 @@ const WB_SCHEMES: Scheme[] = [
     description:
       "Free legal representation for children in conflict with law and children in need of care and protection. Covers JJB, CWC proceedings and rehabilitation.",
     category: "Child Rights",
-    link: "https://westbengal.nalsa.gov.in/child-legal-aid",
+    link: "https://westbengal.nalsa.gov.in/scheme/nalsa-child-friendly-legal-services-for-children-scheme-2024/",
   },
   {
     id: "wb-5",
@@ -126,7 +126,7 @@ const WB_SCHEMES: Scheme[] = [
     description:
       "Priority legal assistance for elderly citizens in property disputes, pension matters, maintenance claims, and elder abuse cases. Includes doorstep legal services.",
     category: "Senior Citizens",
-    link: "https://westbengal.nalsa.gov.in/senior-citizens",
+    link: "https://westbengal.nalsa.gov.in/scheme/nalsa-legal-services-to-senior-citizens-scheme-2016/",
   },
   {
     id: "wb-6",
@@ -134,7 +134,7 @@ const WB_SCHEMES: Scheme[] = [
     description:
       "Comprehensive legal support for Scheduled Caste/Scheduled Tribe communities including atrocity cases, land rights, and enforcement of protective legislation.",
     category: "Marginalized Communities",
-    link: "https://westbengal.nalsa.gov.in/sc-st-legal-aid",
+    link: "https://westbengal.nalsa.gov.in/scheme/nalsa-samvaad-strengthning-access-to-justice-for-marginalized-vulnurable-adivasis-and-denotified-nomadic-tribes-scheme-2025/",
   },
 ];
 
@@ -148,7 +148,7 @@ const WB_LAWYERS: Lawyer[] = [
     location: "Kolkata, Park Street",
     phone: "+91-33-22XX-XXXX",
     email: "amitava.chatterjee@lawfirm.in",
-    link: "http://westbengal.nalsa.gov.in/list-of-panel-lawyers/",
+    link: "hhttps://westbengal.nalsa.gov.in/scheme/scheme-for-para-legal-volunteers/",
   },
   {
     id: "lawyer-2",

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Scale, Menu, X, ChevronDown, UserRound, Mic, CalendarClock, Gavel, FileText, Briefcase, Users, LogIn } from "lucide-react";
+import { Scale, Menu, X, ChevronDown, UserRound, Mic, CalendarClock, Gavel, FileText, Briefcase, Users, LogIn, Briefcase as BriefcaseIcon, Search, FileSearch, Gavel as GavelIcon } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
 export default function Navbar() {
@@ -130,14 +130,86 @@ export default function Navbar() {
             )}
           </div>
 
-          <Link
-            href="/advocate"
-            className={`rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
-              pathname === "/advocate" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
-            }`}
-          >
-            Advocate Portal
-          </Link>
+          {/* Advocate Portal Dropdown */}
+          <div className="relative" ref={advocateRef}>
+            <button
+              onClick={() => setAdvocateOpen((v) => !v)}
+              className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
+                isAdvocateActive ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+              }`}
+              aria-expanded={advocateOpen}
+              aria-haspopup="true"
+            >
+              <BriefcaseIcon className="h-4 w-4" />
+              Advocate Portal
+              <ChevronDown className={`h-4 w-4 transition-transform ${advocateOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {advocateOpen && (
+              <div className="absolute left-0 top-full mt-2 w-56 rounded-xl border border-white/10 bg-navy-900/95 backdrop-blur supports-[backdrop-filter]:bg-navy-900/80 shadow-lg animate-fade-up">
+                <Link
+                  href="/advocate"
+                  className={`block px-4 py-2.5 text-sm font-medium transition-colors ${
+                    pathname === "/advocate" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+                  }`}
+                  onClick={() => setAdvocateOpen(false)}
+                >
+                  <div className="flex items-center gap-2">
+                    <BriefcaseIcon className="h-4 w-4" />
+                    Workspace
+                  </div>
+                </Link>
+                <Link
+                  href="/advocate/cases"
+                  className={`block px-4 py-2.5 text-sm font-medium transition-colors ${
+                    pathname === "/advocate/cases" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+                  }`}
+                  onClick={() => setAdvocateOpen(false)}
+                >
+                  <div className="flex items-center gap-2">
+                    <FileSearch className="h-4 w-4" />
+                    Smart Intake
+                  </div>
+                </Link>
+                <Link
+                  href="/advocate/draft-review"
+                  className={`block px-4 py-2.5 text-sm font-medium transition-colors ${
+                    pathname === "/advocate/draft-review" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+                  }`}
+                  onClick={() => setAdvocateOpen(false)}
+                >
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Draft Review
+                  </div>
+                </Link>
+                <Link
+                  href="/advocate/precedents"
+                  className={`block px-4 py-2.5 text-sm font-medium transition-colors ${
+                    pathname === "/advocate/precedents" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+                  }`}
+                  onClick={() => setAdvocateOpen(false)}
+                >
+                  <div className="flex items-center gap-2">
+                    <GavelIcon className="h-4 w-4" />
+                    Precedents
+                  </div>
+                </Link>
+                <Link
+                  href="/advocate/network"
+                  className={`block px-4 py-2.5 text-sm font-medium transition-colors ${
+                    pathname === "/advocate/network" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+                  }`}
+                  onClick={() => setAdvocateOpen(false)}
+                >
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Lawyer Network
+                  </div>
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
 
         <button
@@ -212,6 +284,50 @@ export default function Navbar() {
             }`}
           >
             Advocate Portal
+          </Link>
+          <Link
+            href="/advocate/cases"
+            onClick={() => setOpen(false)}
+            className={`block rounded-lg px-3 py-2.5 text-sm font-medium ${
+              pathname === "/advocate/cases" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            <div className="flex items-center gap-2 ml-2">
+              <FileSearch className="h-4 w-4" /> Smart Intake
+            </div>
+          </Link>
+          <Link
+            href="/advocate/draft-review"
+            onClick={() => setOpen(false)}
+            className={`block rounded-lg px-3 py-2.5 text-sm font-medium ${
+              pathname === "/advocate/draft-review" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            <div className="flex items-center gap-2 ml-2">
+              <FileText className="h-4 w-4" /> Draft Review
+            </div>
+          </Link>
+          <Link
+            href="/advocate/precedents"
+            onClick={() => setOpen(false)}
+            className={`block rounded-lg px-3 py-2.5 text-sm font-medium ${
+              pathname === "/advocate/precedents" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            <div className="flex items-center gap-2 ml-2">
+              <GavelIcon className="h-4 w-4" /> Precedents
+            </div>
+          </Link>
+          <Link
+            href="/advocate/network"
+            onClick={() => setOpen(false)}
+            className={`block rounded-lg px-3 py-2.5 text-sm font-medium ${
+              pathname === "/advocate/network" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            <div className="flex items-center gap-2 ml-2">
+              <Users className="h-4 w-4" /> Lawyer Network
+            </div>
           </Link>
         </div>
       )}

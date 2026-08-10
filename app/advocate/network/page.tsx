@@ -385,7 +385,7 @@ function LawyerCard({ lawyer }: { lawyer: LawyerProfile }) {
               <div className="flex items-center gap-2">
                 <h3 className="text-xl font-bold">{lawyer.name}</h3>
                 {lawyer.verified && (
-                  <CheckCircle className="h-5 w-5 text-gold-400" title="Verified Advocate" />
+                  <CheckCircle className="h-5 w-5 text-gold-400" />
                 )}
               </div>
               <p className="text-sm text-navy-200">{lawyer.headline}</p>
