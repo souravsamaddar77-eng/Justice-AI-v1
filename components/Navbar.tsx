@@ -2,18 +2,42 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Scale, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { Scale, Menu, X, ChevronDown, UserRound, Mic, CalendarClock, Gavel, FileText, Briefcase, Users, LogIn } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 
 export default function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [citizenOpen, setCitizenOpen] = useState(false);
+  const citizenRef = useRef<HTMLDivElement>(null);
 
-  const links = [
-    { href: "/", label: "Home" },
-    { href: "/citizen", label: "Citizen Portal" },
-    { href: "/advocate", label: "Advocate Portal" },
-  ];
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (citizenRef.current && !citizenRef.current.contains(event.target as Node)) {
+        setCitizenOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const isCitizenActive = pathname.startsWith("/victim-citizen") || pathname.startsWith("/citizen");
+  const isAdvocateActive = pathname.startsWith("/advocate");
+  const [advocateOpen, setAdvocateOpen] = useState(false);
+  const advocateRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (citizenRef.current && !citizenRef.current.contains(event.target as Node)) {
+        setCitizenOpen(false);
+      }
+      if (advocateRef.current && !advocateRef.current.contains(event.target as Node)) {
+        setAdvocateOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 border-b border-navy-200/70 bg-navy-900/95 backdrop-blur supports-[backdrop-filter]:bg-navy-900/80">
@@ -28,20 +52,92 @@ export default function Navbar() {
         </Link>
 
         <div className="hidden items-center gap-1 sm:flex">
-          {links.map((l) => {
-            const active = pathname === l.href;
-            return (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={`rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
-                  active ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
-                }`}
-              >
-                {l.label}
-              </Link>
-            );
-          })}
+          <Link
+            href="/"
+            className={`rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
+              pathname === "/" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            Home
+          </Link>
+
+          {/* Citizen Portal Dropdown */}
+          <div className="relative" ref={citizenRef}>
+            <button
+              onClick={() => setCitizenOpen((v) => !v)}
+              className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
+                isCitizenActive ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+              }`}
+              aria-expanded={citizenOpen}
+              aria-haspopup="true"
+            >
+              <UserRound className="h-4 w-4" />
+              Citizen Portal
+              <ChevronDown className={`h-4 w-4 transition-transform ${citizenOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {citizenOpen && (
+              <div className="absolute left-0 top-full mt-2 w-56 rounded-xl border border-white/10 bg-navy-900/95 backdrop-blur supports-[backdrop-filter]:bg-navy-900/80 shadow-lg animate-fade-up">
+                <Link
+                  href="/victim-citizen"
+                  className={`block px-4 py-2.5 text-sm font-medium transition-colors ${
+                    pathname === "/victim-citizen" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+                  }`}
+                  onClick={() => setCitizenOpen(false)}
+                >
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Dashboard
+                  </div>
+                </Link>
+                <Link
+                  href="/citizen/voice-assistant"
+                  className={`block px-4 py-2.5 text-sm font-medium transition-colors ${
+                    pathname === "/citizen/voice-assistant" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+                  }`}
+                  onClick={() => setCitizenOpen(false)}
+                >
+                  <div className="flex items-center gap-2">
+                    <Mic className="h-4 w-4" />
+                    Voice Assistant
+                  </div>
+                </Link>
+                <Link
+                  href="/citizen/action-tracker"
+                  className={`block px-4 py-2.5 text-sm font-medium transition-colors ${
+                    pathname === "/citizen/action-tracker" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+                  }`}
+                  onClick={() => setCitizenOpen(false)}
+                >
+                  <div className="flex items-center gap-2">
+                    <CalendarClock className="h-4 w-4" />
+                    Action Tracker
+                  </div>
+                </Link>
+                <Link
+                  href="/citizen/lawyers"
+                  className={`block px-4 py-2.5 text-sm font-medium transition-colors ${
+                    pathname === "/citizen/lawyers" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+                  }`}
+                  onClick={() => setCitizenOpen(false)}
+                >
+                  <div className="flex items-center gap-2">
+                    <Gavel className="h-4 w-4" />
+                    Find Lawyers
+                  </div>
+                </Link>
+              </div>
+            )}
+          </div>
+
+          <Link
+            href="/advocate"
+            className={`rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
+              pathname === "/advocate" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            Advocate Portal
+          </Link>
         </div>
 
         <button
@@ -55,18 +151,68 @@ export default function Navbar() {
 
       {open && (
         <div className="border-t border-white/10 bg-navy-900 px-4 py-2 sm:hidden">
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              onClick={() => setOpen(false)}
-              className={`block rounded-lg px-3 py-2.5 text-sm font-medium ${
-                pathname === l.href ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
-              }`}
-            >
-              {l.label}
-            </Link>
-          ))}
+          <Link
+            href="/"
+            onClick={() => setOpen(false)}
+            className={`block rounded-lg px-3 py-2.5 text-sm font-medium ${
+              pathname === "/" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            Home
+          </Link>
+          <Link
+            href="/victim-citizen"
+            onClick={() => setOpen(false)}
+            className={`block rounded-lg px-3 py-2.5 text-sm font-medium ${
+              pathname === "/victim-citizen" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <UserRound className="h-4 w-4" /> Citizen Portal
+            </div>
+          </Link>
+          <Link
+            href="/citizen/voice-assistant"
+            onClick={() => setOpen(false)}
+            className={`block rounded-lg px-3 py-2.5 text-sm font-medium ${
+              pathname === "/citizen/voice-assistant" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            <div className="flex items-center gap-2 ml-2">
+              <Mic className="h-4 w-4" /> Voice Assistant
+            </div>
+          </Link>
+          <Link
+            href="/citizen/action-tracker"
+            onClick={() => setOpen(false)}
+            className={`block rounded-lg px-3 py-2.5 text-sm font-medium ${
+              pathname === "/citizen/action-tracker" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            <div className="flex items-center gap-2 ml-2">
+              <CalendarClock className="h-4 w-4" /> Action Tracker
+            </div>
+          </Link>
+          <Link
+            href="/citizen/lawyers"
+            onClick={() => setOpen(false)}
+            className={`block rounded-lg px-3 py-2.5 text-sm font-medium ${
+              pathname === "/citizen/lawyers" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            <div className="flex items-center gap-2 ml-2">
+              <Gavel className="h-4 w-4" /> Find Lawyers
+            </div>
+          </Link>
+          <Link
+            href="/advocate"
+            onClick={() => setOpen(false)}
+            className={`block rounded-lg px-3 py-2.5 text-sm font-medium ${
+              pathname === "/advocate" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            Advocate Portal
+          </Link>
         </div>
       )}
     </header>

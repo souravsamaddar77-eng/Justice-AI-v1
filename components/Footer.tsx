@@ -26,7 +26,7 @@ export default function Footer() {
             <h3 className="text-sm font-semibold uppercase tracking-wider text-white">Explore</h3>
             <ul className="mt-3 space-y-2 text-sm">
               <li><Link href="/" className="hover:text-gold-300">Home</Link></li>
-              <li><Link href="/citizen" className="hover:text-gold-300">Citizen Portal</Link></li>
+              <li><Link href="/victim-citizen" className="hover:text-gold-300">Victim/Citizen Portal</Link></li>
               <li><Link href="/advocate" className="hover:text-gold-300">Advocate Portal</Link></li>
             </ul>
           </div>

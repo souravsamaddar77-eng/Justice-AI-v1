@@ -41,9 +41,9 @@ export default function LandingPage() {
 
           {/* Two entry buttons */}
           <div className="mt-9 flex flex-col gap-4 sm:flex-row">
-            <Link href="/citizen" className="btn-primary text-base">
+            <Link href="/victim-citizen" className="btn-primary text-base">
               <UserRound className="h-5 w-5" />
-              I am a Citizen (Get Legal Help)
+              I am a Victim/Citizen (Get Legal Help)
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link href="/advocate" className="btn-secondary text-base bg-white/10 text-white hover:bg-white/20 hover:text-white">
@@ -95,7 +95,7 @@ export default function LandingPage() {
         <div className="grid gap-6 md:grid-cols-2">
           {/* Citizen card */}
           <Link
-            href="/citizen"
+            href="/victim-citizen"
             className="group relative overflow-hidden rounded-2xl border border-navy-200 bg-white p-8 transition-all hover:-translate-y-0.5 hover:shadow-lg"
           >
             <div className="absolute right-0 top-0 h-24 w-24 -translate-y-8 translate-x-8 rounded-full bg-gold-100" />
