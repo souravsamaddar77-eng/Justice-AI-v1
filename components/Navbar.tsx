@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Scale, Menu, X, ChevronDown, UserRound, Mic, CalendarClock, Gavel, FileText, Briefcase, Users, LogIn, Briefcase as BriefcaseIcon, Search, FileSearch, Gavel as GavelIcon } from "lucide-react";
+import { Scale, Menu, X, ChevronDown, UserRound, Mic, CalendarClock, Gavel, FileText, Briefcase, Users, LogIn, Briefcase as BriefcaseIcon, Search, FileSearch, Gavel as GavelIcon, Compass } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
 export default function Navbar() {
@@ -124,6 +124,18 @@ export default function Navbar() {
                   <div className="flex items-center gap-2">
                     <Gavel className="h-4 w-4" />
                     Find Lawyers
+                  </div>
+                </Link>
+                <Link
+                  href="/citizen#legal-aid"
+                  className={`block px-4 py-2.5 text-sm font-medium transition-colors ${
+                    pathname === "/citizen" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+                  }`}
+                  onClick={() => setCitizenOpen(false)}
+                >
+                  <div className="flex items-center gap-2">
+                    <Compass className="h-4 w-4" />
+                    Legal Aid
                   </div>
                 </Link>
               </div>
@@ -274,6 +286,17 @@ export default function Navbar() {
           >
             <div className="flex items-center gap-2 ml-2">
               <Gavel className="h-4 w-4" /> Find Lawyers
+            </div>
+          </Link>
+          <Link
+            href="/citizen#legal-aid"
+            onClick={() => setOpen(false)}
+            className={`block rounded-lg px-3 py-2.5 text-sm font-medium ${
+              pathname === "/citizen" ? "bg-white/10 text-white" : "text-navy-300 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            <div className="flex items-center gap-2 ml-2">
+              <Compass className="h-4 w-4" /> Legal Aid
             </div>
           </Link>
           <Link

@@ -24,8 +24,10 @@ import {
   AlertTriangle,
   CheckCircle,
   Star,
+  Compass,
 } from "lucide-react";
 import Link from "next/link";
+import LegalAid from "@/components/LegalAid";
 
 interface QuickAction {
   id: string;
@@ -83,6 +85,7 @@ const STATS: Stat[] = [
   { label: "Panel Lawyers", value: "8+", icon: <UserRound className="h-5 w-5" />, color: "text-blue-500" },
   { label: "Legal Categories", value: "12+", icon: <BarChart3 className="h-5 w-5" />, color: "text-gold-500" },
   { label: "Voice Commands", value: "∞", icon: <Mic className="h-5 w-5" />, color: "text-purple-500" },
+  { label: "Legal Aid Clinics", value: "1+", icon: <Compass className="h-5 w-5" />, color: "text-orange-500" },
 ];
 
 export default function CitizenPortalPage() {
@@ -99,8 +102,8 @@ export default function CitizenPortalPage() {
             Advanced Legal Tools
           </h1>
           <p className="mt-4 max-w-2xl text-lg leading-relaxed text-navy-300">
-            Three powerful tools to understand your legal notice, find the right lawyer, and get answers by voice —
-            all powered by Justice AI with Indian legal context.
+            Four powerful tools to understand your legal notice, find the right lawyer, get answers by voice,
+            and locate free legal aid clinics — all powered by Justice AI with Indian legal context.
           </p>
 
           {/* Trust indicators */}
@@ -157,6 +160,22 @@ export default function CitizenPortalPage() {
               />
             ))}
           </div>
+        </section>
+
+        {/* Legal Aid Section */}
+        <section id="legal-aid" className="mb-16">
+          <div className="mb-8 text-center">
+            <p className="eyebrow text-gold-500">Legal Aid</p>
+            <h2 className="mt-2 font-serif text-3xl font-semibold text-navy-900">
+              Free Legal Aid Clinics Near You
+            </h2>
+            <p className="mt-2 max-w-2xl mx-auto text-navy-600">
+              Find your nearest law-school legal aid clinic. Brainware University (Kolkata) is the first clinic
+              in our network — more colleges coming soon. Use GPS or select a city to locate clinics,
+              download application forms, and access your rights handbook.
+            </p>
+          </div>
+          <LegalAid />
         </section>
 
         {/* How It Works */}

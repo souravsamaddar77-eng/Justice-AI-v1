@@ -1,8 +1,9 @@
 "use client";
 
-import { Briefcase, ArrowLeftRight, Wand2, Info } from "lucide-react";
+import { Briefcase, ArrowLeftRight, Wand2, Info, Gavel } from "lucide-react";
 import IpBnsConverter from "@/components/IpBnsConverter";
 import DraftingCopilot from "@/components/DraftingCopilot";
+import LokAdalatUpdates from "@/components/LokAdalatUpdates";
 import ChatWidget from "@/components/ChatWidget";
 
 export default function AdvocatePage() {
@@ -16,8 +17,9 @@ export default function AdvocatePage() {
             <Briefcase className="h-8 w-8 text-gold-300" /> Advocate Workspace
           </h1>
           <p className="mt-2 max-w-2xl text-navy-300">
-            Two tools for a faster practice — convert old IPC sections to the new BNS 2023, and draft
-            bail applications, replies, and notices with an AI co-pilot.
+            Three tools for a faster practice — convert old IPC sections to the new BNS 2023, draft
+            bail applications, replies, and notices with an AI co-pilot, and track Lok Adalat schedules
+            across West Bengal districts.
           </p>
         </div>
       </section>
@@ -53,6 +55,20 @@ export default function AdvocatePage() {
             </div>
           </div>
           <DraftingCopilot />
+        </section>
+
+        {/* ───────── Lok Adalat Updates ───────── */}
+        <section>
+          <div className="mb-4 flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-navy-900 text-gold-300">
+              <Gavel className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="font-serif text-2xl font-semibold text-navy-900">Lok Adalat Updates</h2>
+              <p className="text-sm text-navy-500">Search and filter Lok Adalat sittings across all West Bengal districts.</p>
+            </div>
+          </div>
+          <LokAdalatUpdates />
         </section>
       </div>
 

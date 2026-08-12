@@ -83,25 +83,39 @@ export async function callNemotron(
     stream: false,
   };
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      Accept: "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
 
-  if (!res.ok) {
-    const detail = await safeText(res);
-    throw new Error(`Nemotron HTTP ${res.status}: ${detail.slice(0, 300)}`);
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+        Accept: "application/json",
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      const detail = await safeText(res);
+      throw new Error(`Nemotron HTTP ${res.status}: ${detail.slice(0, 300)}`);
+    }
+
+    const data = await res.json();
+    const text = data?.choices?.[0]?.message?.content ?? "";
+    if (!text) throw new Error("Nemotron returned empty content");
+    return text.trim();
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error("Nemotron request timed out after 60 seconds");
+    }
+    throw err;
   }
-
-  const data = await res.json();
-  const text = data?.choices?.[0]?.message?.content ?? "";
-  if (!text) throw new Error("Nemotron returned empty content");
-  return text.trim();
 }
 
 /* ─────────── helpers ─────────── */
