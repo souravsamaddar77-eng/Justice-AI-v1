@@ -31,6 +31,24 @@ export default function DraftingCopilot() {
     setBusy(true);
     setError("");
     setResult(null);
+
+    // Form validation
+    if (!clientName.trim()) {
+      setError("Client name is required");
+      setBusy(false);
+      return;
+    }
+    if (!issue.trim()) {
+      setError("Issue/matter is required");
+      setBusy(false);
+      return;
+    }
+    if (!date.trim()) {
+      setError("Date is required");
+      setBusy(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/draft-document", {
         method: "POST",
@@ -49,9 +67,16 @@ export default function DraftingCopilot() {
 
   function copyDoc() {
     if (!result) return;
-    navigator.clipboard.writeText(result.document);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    try {
+      navigator.clipboard.writeText(result.document);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (err) {
+      console.error("Clipboard failed:", err);
+      setError("Failed to copy to clipboard. Please try again.");
+      // Auto-clear error after 3 seconds
+      setTimeout(() => setError(""), 3000);
+    }
   }
 
   /** Generate a PDF from the drafted document text. */
@@ -74,7 +99,14 @@ export default function DraftingCopilot() {
       doc.text(line, 10, y);
       y += 5;
     }
-    doc.save(`${result.title.replace(/\s+/g, "_")}.pdf`);
+
+    // Sanitize filename: remove/replace invalid characters
+    const safeTitle = result.title
+      .replace(/[\\/:*?"<>|]/g, '_')    // Replace invalid Windows chars
+      .replace(/\s+/g, ' ')             // Collapse multiple spaces
+      .trim();
+
+    doc.save(`${safeTitle.replace(/\s+/g, "_")}.pdf`);
   }
 
   return (
@@ -107,7 +139,12 @@ export default function DraftingCopilot() {
           </Field>
 
           <Field label="Client name">
-            <input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="e.g. Ramesh Kumar" className="input" />
+            <input
+              value={clientName}
+              onChange={(e) => setClientName(e.target.value)}
+              placeholder="e.g. Ramesh Kumar"
+              className="input"
+            />
           </Field>
 
           <Field label="Issue / matter">

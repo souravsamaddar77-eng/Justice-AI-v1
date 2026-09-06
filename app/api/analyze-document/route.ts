@@ -1,16 +1,13 @@
 // ─────────────────────────────────────────────────────────────
 //  POST /api/analyze-document  —  Legal notice analysis (Gemini)
+//  with OCR.space integration for scanned PDFs/images
 //
 //  Body:  { text, filename?, fileBase64? }
-//  200:   { urgency, daysToRespond, deadlineDate, summary[],
-//           keyTerms[], source }   source ∈ "gemini"|"mock"
+//  200:   { urgency, daysToRespond, deadlineDate, summary[], keyTerms[], source }
 //
-//  Gemini is asked to return strict JSON; we validate/repair it.
-//  Fallback: realistic heuristic mock.
-// ─────────────────────────────────────────────────────────────
-
 import { NextResponse } from "next/server";
 import { callGemini } from "@/lib/ai";
+import { extractTextWithOcr } from "@/lib/ocr";
 import { mockAnalyze } from "@/lib/mock-data";
 import type { AnalyzeRequestBody, AnalyzeResponseBody, Urgency } from "@/types";
 // Use pdfjs-dist legacy build for Node.js compatibility
@@ -24,8 +21,7 @@ async function extractPdfText(base64: string): Promise<string> {
     const buffer = Buffer.from(base64, "base64");
     const uint8Array = new Uint8Array(buffer);
 
-    // Disable worker for server-side usage
-    (pdfjs.GlobalWorkerOptions as any).workerSrc = undefined;
+    // No worker needed for legacy build in Node.js
 
     const loadingTask = pdfjs.getDocument({ data: uint8Array });
     const pdf = await loadingTask.promise;
@@ -36,6 +32,7 @@ async function extractPdfText(base64: string): Promise<string> {
       const content = await page.getTextContent();
       const pageText = content.items
         .map((item: any) => item.str)
+        .filter((str): str is string => typeof str === "string" && str.length > 0)
         .join(" ");
       fullText += pageText + "\n";
     }
@@ -72,27 +69,63 @@ export async function POST(req: Request) {
   const filename = body.filename || "";
   const fileBase64 = body.fileBase64 || "";
 
+  // Initialize with provided text
   let extractedText = text;
+  let extractionMethod: "none" | "native" | "ocr" = "none";
+  let extractionError: string | null = null;
 
-  // ── If PDF uploaded (base64), extract text server-side ──
-  if (fileBase64 && /\.(pdf)$/i.test(filename)) {
-    const pdfText = await extractPdfText(fileBase64);
-    if (pdfText) {
-      extractedText = pdfText;
+  // Debug: Log environment variables (remove in production)
+  console.log('[DEBUG] OCR_SPACE_API_KEY present:', !!process.env.OCR_SPACE_API_KEY);
+  console.log('[DEBUG] GEMINI_API_KEY present:', !!process.env.GEMINI_API_KEY);
+  console.log('[DEBUG] File base64 length:', fileBase64?.length || 0);
+  console.log('[DEBUG] Filename:', filename);
+
+  // ── Process uploaded file if provided ─────────────────────────────────────
+  if (fileBase64 && filename) {
+    const ext = filename.split('.').pop()?.toLowerCase() ?? "";
+    const isImage = ['jpg', 'jpeg', 'png', 'tiff', 'bmp', 'gif'].includes(ext);
+    const isPdf = ext === 'pdf';
+
+    console.log('[DEBUG] File extension:', ext);
+    console.log('[DEBUG] Is image:', isImage);
+    console.log('[DEBUG] Is PDF:', isPdf);
+
+    if (isImage || isPdf) {
+      try {
+        // For now, always use OCR for PDFs and images
+        console.log('[DEBUG] Calling OCR.space API for file');
+        const ocrResult = await extractTextWithOcr(fileBase64, ext.toUpperCase());
+        console.log('[DEBUG] OCR result:', ocrResult);
+        if (!ocrResult.error && ocrResult.text.trim()) {
+          extractedText = ocrResult.text;
+          extractionMethod = "ocr";
+          console.log('[DEBUG] OCR successful, text length:', extractedText.length);
+        } else {
+          extractionError = ocrResult.error || "OCR failed";
+          console.log('[DEBUG] OCR failed:', extractionError);
+        }
+      } catch (err) {
+        extractionError = err instanceof Error ? err.message : String(err);
+        console.warn(`[/api/analyze-document] File processing error:`, extractionError);
+      }
     }
   }
 
-  // ── Real path: Gemini ──
+  // ── Real path: Gemini (using extracted text) ─────────────────────────────
   const apiKey = process.env.GEMINI_API_KEY;
-  if (apiKey) {
+  if (apiKey && extractedText.trim()) {
     try {
+      // Use the extracted text (from native, OCR, or body.text) for Gemini analysis
       const payload = extractedText.trim()
         ? extractedText
         : `Pretend this is a legal notice file named "${filename || "notice.pdf"}". Provide a reasonable default analysis.`;
+
       const raw = await callGemini([{ role: "user", text: payload }], SYSTEM);
       const parsed = extractJson(raw);
       if (parsed) {
         const out = normalize(parsed, false);
+        // Optionally add extraction method to response for debugging
+        // out.extractionMethod = extractionMethod;
         return NextResponse.json(out);
       }
       console.warn("[/api/analyze-document] Gemini JSON unparseable → mock fallback");
@@ -101,8 +134,13 @@ export async function POST(req: Request) {
     }
   }
 
-  // ── Mock fallback ──
-  const m = mockAnalyze(extractedText, filename);
+  // ── Mock fallback (missing key, real call failed, or no text extracted) ─────
+  // Pass extraction info to mock data for better fallback responses
+  const m = mockAnalyze(extractedText, filename, {
+    extractionMethod,
+    extractionError: extractionError ?? undefined,
+    hasFile: !!fileBase64
+  });
   const out: AnalyzeResponseBody = { ...m, source: "mock" };
   return NextResponse.json(out);
 }

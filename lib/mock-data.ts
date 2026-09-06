@@ -4,7 +4,7 @@
 //  Used as a fallback by every API route when an API key is missing
 //  or a provider call fails. This keeps the on-stage demo unbreakable.
 //  Check the "source" field on responses to see which path served you.
-// ─────────────────────────────────────────────────────────────
+//  ─────────────────────────────────────────────────────────────
 
 import type { Urgency } from "@/types";
 
@@ -74,9 +74,19 @@ export function mockChatReply(message: string, persona: "citizen" | "advocate" =
 
 /* ─── Document analysis (Gemini fallback) ─── */
 
+interface ExtractionMetadata {
+  extractionMethod?: "none" | "native" | "ocr";
+  extractionError?: string;
+  hasFile?: boolean;
+}
+
 const SAMPLE_KEY_TERMS = ["Legal Notice", "Demand", "Reply Window", "Cause of Action", "Statutory Compliance"];
 
-export function mockAnalyze(text: string, filename = "") {
+export function mockAnalyze(
+  text: string,
+  filename = "",
+  metadata?: ExtractionMetadata
+) {
   const urgency = inferUrgency(`${text} ${filename}`);
   const days = inferDaysToRespond(text, filename);
 
@@ -96,6 +106,28 @@ export function mockAnalyze(text: string, filename = "") {
   if (t.includes("gst")) detected.push("GST demand");
   if (t.includes("defamation")) detected.push("Defamation (IPC 499/500 → BNS 356)");
   if (detected.length === 0) detected.push(...baseTerms.slice(0, 3));
+
+  // Enhance mock responses based on extraction method
+  const enhancementNotes: string[] = [];
+  if (metadata?.extractionMethod === "ocr") {
+    enhancementNotes.push("Text extracted via OCR (may contain recognition errors)");
+  } else if (metadata?.extractionMethod === "native") {
+    enhancementNotes.push("Text extracted via native PDF parsing");
+  } else if (metadata?.hasFile && !metadata?.extractionMethod) {
+    enhancementNotes.push("File processing failed - using filename-based heuristics");
+  }
+
+  // Add enhancement notes to summary if relevant
+  if (enhancementNotes.length > 0) {
+    // Replace first summary note with enhancement notice if not already present
+    const hasEnhancement = notices.some(n =>
+      enhancementNotes.some(note => n.toLowerCase().includes(note.toLowerCase()))
+    );
+
+    if (!hasEnhancement && notices.length > 0) {
+      notices[0] = `[Process Info: ${enhancementNotes.join('; ')}] ${notices[0]}`;
+    }
+  }
 
   return {
     urgency,
@@ -191,6 +223,7 @@ function renderDocument(type: string, client: string, issue: string, date: strin
         notes ? `5. That ${notes}.` : "",
         "",
         `Verified at [Place] on this ${date}, the contents of which are true and correct to the best of my knowledge and belief.`,
+        "",
         "",
         "                                  DEPONENT",
       ].filter(Boolean).join("\n");

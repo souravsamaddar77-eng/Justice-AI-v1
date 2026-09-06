@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   UserRound,
   MessageSquare,
@@ -20,7 +20,6 @@ import {
   BookOpen,
   Users,
 } from "lucide-react";
-import Link from "next/link";
 
 interface LawyerProfile {
   id: string;
@@ -235,16 +234,21 @@ export default function NetworkPage() {
   const allSpecializations = Array.from(new Set(MOCK_LAWYERS.flatMap(l => l.specialization))).sort();
   const allLocations = Array.from(new Set(MOCK_LAWYERS.map(l => l.location))).sort();
 
-  const filteredLawyers = MOCK_LAWYERS.filter(lawyer => {
-    if (searchQuery && !lawyer.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !lawyer.headline.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !lawyer.specialization.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()))) {
-      return false;
-    }
-    if (specializationFilter && !lawyer.specialization.includes(specializationFilter)) return false;
-    if (locationFilter && lawyer.location !== locationFilter) return false;
-    return true;
-  });
+  // Keep this value referentially stable. The pagination-reset effect below
+  // depends on it; recreating an array on every render causes an update loop.
+  const filteredLawyers = useMemo(() => {
+    const normalizedQuery = searchQuery.toLowerCase();
+    return MOCK_LAWYERS.filter(lawyer => {
+      if (normalizedQuery && !lawyer.name.toLowerCase().includes(normalizedQuery) &&
+          !lawyer.headline.toLowerCase().includes(normalizedQuery) &&
+          !lawyer.specialization.some(s => s.toLowerCase().includes(normalizedQuery))) {
+        return false;
+      }
+      if (specializationFilter && !lawyer.specialization.includes(specializationFilter)) return false;
+      if (locationFilter && lawyer.location !== locationFilter) return false;
+      return true;
+    });
+  }, [searchQuery, specializationFilter, locationFilter]);
 
   const loadMore = useCallback(() => {
     if (loading || !hasMore) return;
@@ -273,6 +277,7 @@ export default function NetworkPage() {
   useEffect(() => {
     setLawyers(filteredLawyers.slice(0, 3));
     setHasMore(filteredLawyers.length > 3);
+    setLoading(false);
   }, [filteredLawyers]);
 
   return (
@@ -364,6 +369,8 @@ export default function NetworkPage() {
 }
 
 function LawyerCard({ lawyer }: { lawyer: LawyerProfile }) {
+  const [connectionRequested, setConnectionRequested] = useState(false);
+
   return (
     <div className="card-surface rounded-2xl overflow-hidden hover:border-gold-300/50 hover:shadow-xl transition-all">
       {/* Cover Image */}
@@ -392,8 +399,14 @@ function LawyerCard({ lawyer }: { lawyer: LawyerProfile }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button className="btn-primary flex items-center gap-2 px-4 py-2">
-              <Plus className="h-4 w-4" /> Connect
+            <button
+              type="button"
+              onClick={() => setConnectionRequested(true)}
+              disabled={connectionRequested}
+              className="btn-primary flex items-center gap-2 px-4 py-2 disabled:cursor-default disabled:opacity-75"
+            >
+              {connectionRequested ? <CheckCircle className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              {connectionRequested ? "Requested" : "Connect"}
             </button>
             <button className="btn-secondary p-2" aria-label="More options">
               <MoreHorizontal className="h-5 w-5" />
@@ -442,12 +455,12 @@ function LawyerCard({ lawyer }: { lawyer: LawyerProfile }) {
 
         {/* Quick Actions */}
         <div className="flex items-center gap-3 pt-2 border-t border-navy-100">
-          <Link
-            href={`/advocate/network/${lawyer.id}`}
+          <a
+            href={`mailto:${lawyer.name.toLowerCase().replace(/\s+/g, ".")}@lawfirm.example.com?subject=${encodeURIComponent(`Message from Justice AI regarding a professional connection`)}`}
             className="btn-secondary flex-1 text-center text-sm"
           >
             <MessageSquare className="h-3.5 w-3.5" /> Message
-          </Link>
+          </a>
           <a
             href={`https://linkedin.com/in/${lawyer.name.toLowerCase().replace(/\s+/g, "-")}`}
             target="_blank"

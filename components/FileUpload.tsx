@@ -17,6 +17,15 @@ export default function FileUpload({ onAnalyze, busy }: Props) {
 
   const accept = ".pdf,.png,.jpg,.jpeg,.txt,.doc,.docx";
 
+  const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for (let index = 0; index < bytes.length; index += 1) {
+      binary += String.fromCharCode(bytes[index]);
+    }
+    return btoa(binary);
+  };
+
   const handleFile = useCallback(
     async (f: File) => {
       setError("");
@@ -32,16 +41,21 @@ export default function FileUpload({ onAnalyze, busy }: Props) {
           text = "";
         }
       }
-      // PDF files: convert to base64 for server-side extraction
-      else if (/\.(pdf)$/i.test(f.name)) {
+      // PDF and image files: convert to base64 for server-side extraction or OCR
+      else if (/\.(pdf|png|jpe?g|tiff?|bmp|gif)$/i.test(f.name)) {
         try {
           const arrayBuffer = await f.arrayBuffer();
-          fileBase64 = Buffer.from(arrayBuffer).toString("base64");
+          fileBase64 = arrayBufferToBase64(arrayBuffer);
         } catch {
           fileBase64 = undefined;
         }
       }
-      // Other types (images, DOC): rely on filename for now (UI demo)
+      // Other types (DOC): rely on filename for now (UI demo)
+      else {
+        // For DOC files, we don't have a real extraction, so we leave fileBase64 undefined
+        fileBase64 = undefined;
+      }
+
       await onAnalyze(text, f.name, fileBase64);
     },
     [onAnalyze]
@@ -100,6 +114,9 @@ export default function FileUpload({ onAnalyze, busy }: Props) {
             {isPdf ? <FileType className="h-3.5 w-3.5 text-red-500" /> : <FileText className="h-3.5 w-3.5 text-gold-600" />}
             {file.name}
             {isPdf && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-600">PDF text will be extracted</span>}
+            {!isPdf && /\.(png|jpe?g|tiff?|bmp|gif)$/i.test(file.name) && (
+              <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">Image text extracted via OCR</span>
+            )}
           </span>
         )}
       </div>

@@ -6,7 +6,8 @@ metadata:
 ---
 
 # Justice AI — Project Memory
-
+ 
+ 
 ## Overview
 Dual-sided Indian Legal AI platform built for hackathon:
 - **Citizen Portal**: Upload legal notices → plain-language summary, urgency badge, deadline tracker, AI chatbot

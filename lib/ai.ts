@@ -84,7 +84,9 @@ export async function callNemotron(
   };
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+  // A demo flow must fail over quickly instead of leaving the drafting screen
+  // blocked while the provider is slow or unavailable.
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
 
   try {
     const res = await fetch(url, {
@@ -112,7 +114,7 @@ export async function callNemotron(
   } catch (err) {
     clearTimeout(timeoutId);
     if (err instanceof Error && err.name === "AbortError") {
-      throw new Error("Nemotron request timed out after 60 seconds");
+      throw new Error("Nemotron request timed out after 15 seconds");
     }
     throw err;
   }
