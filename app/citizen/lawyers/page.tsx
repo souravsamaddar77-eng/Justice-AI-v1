@@ -339,8 +339,9 @@ export default function LawyersPage() {
   return (
     <div className="bg-navy-50/40 min-h-screen">
       {/* Header */}
-      <section className="border-b border-navy-200/70 bg-navy-900 text-white">
+      <section data-page-header className="border-b border-navy-200/70 bg-navy-900 text-white">
         <div className="mx-auto max-w-6xl px-4 py-10">
+        <div className="demo-notice">Sample directory: profiles, ratings and verification badges are demonstration data, not verified Justice AI accounts. Check an advocate’s credentials through official channels.</div>
           <span className="eyebrow text-gold-400">Citizen Portal</span>
           <h1 className="mt-2 flex items-center gap-3 font-serif text-3xl font-bold sm:text-4xl">
             <Gavel className="h-9 w-9 text-gold-300" />
@@ -354,6 +355,7 @@ export default function LawyersPage() {
       </section>
 
       <div className="mx-auto max-w-6xl px-4 py-10">
+        <div className="demo-notice">Sample directory: profiles, ratings and verification badges are demonstration data, not verified Justice AI accounts. Check an advocate’s credentials through official channels.</div>
         {/* Search & Location Bar */}
         <div className="card-surface p-6 mb-8">
           <div className="flex flex-col lg:flex-row gap-4">

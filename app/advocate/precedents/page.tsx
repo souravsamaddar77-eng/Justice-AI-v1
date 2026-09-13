@@ -478,7 +478,7 @@ export default function PrecedentsPage() {
   return (
     <div className="bg-navy-50/40 min-h-screen">
       {/* Header */}
-      <section className="border-b border-navy-200/70 bg-navy-900 text-white">
+      <section data-page-header className="border-b border-navy-200/70 bg-navy-900 text-white">
         <div className="mx-auto max-w-6xl px-4 py-10">
           <span className="eyebrow text-gold-400">Advocate Portal</span>
           <h1 className="mt-2 flex items-center gap-3 font-serif text-3xl font-bold">

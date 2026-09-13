@@ -1,63 +1,27 @@
-// ─────────────────────────────────────────────────────────────
-//  POST /api/chat  —  Justice AI chatbot (Gemini)
-//
-//  Body:  { message, history?, persona? }
-//  200:   { reply, source }   where source ∈ "gemini"|"mock"
-//
-//  Security: GEMINI_API_KEY is read here on the server only.
-//  Fallback: if the key is missing OR the call fails, return mock.
-// ─────────────────────────────────────────────────────────────
-
-import { NextResponse } from "next/server";
-import { callGemini } from "@/lib/ai";
+import { AIError, aiErrorResponse, generateAI, requireAIConsent } from "@/lib/ai";
+import { aiStreamResponse } from "@/lib/ai-stream";
 import { mockChatReply } from "@/lib/mock-data";
-import type { ChatRequestBody, ChatResponseBody } from "@/types";
-
+import type { ChatRequestBody, ChatMessage } from "@/types";
 export const runtime = "nodejs";
-
-const PERSONA_INSTRUCTIONS: Record<string, string> = {
-  citizen:
-    "You are Justice AI, an assistant for ordinary Indian citizens. Explain legal concepts in very simple, plain language with short sentences. Always clarify that you are not a substitute for a lawyer and recommend consulting an advocate. Keep replies under 120 words.",
-  advocate:
-    "You are Justice AI, an assistant for Indian advocates. Provide concise, technically precise legal guidance referencing relevant statutes (IPC, BNS 2023, CrPC, BNSS). Keep replies under 160 words unless asked for detail.",
+const PERSONA = {
+  citizen: "You are Justice AI, an assistant for ordinary Indian citizens. Explain legal concepts in simple language. Distinguish general information from legal advice, recommend a qualified advocate when appropriate, and never invent deadlines, citations or case facts. Keep replies under 160 words.",
+  advocate: "You are Justice AI, an assistant for Indian advocates. Provide concise, precise legal research assistance. Identify uncertain citations and facts; never fabricate authorities or deadlines. Verify applicable IPC/BNS and CrPC/BNSS transition dates instead of assuming a code. Keep replies under 240 words unless asked for detail.",
 };
-
 export async function POST(req: Request) {
   let body: ChatRequestBody;
+  try { body = await req.json(); } catch { return Response.json({ error: "Invalid JSON body" }, { status: 400 }); }
   try {
-    body = (await req.json()) as ChatRequestBody;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
-
-  const message = (body.message || "").trim();
-  if (!message) {
-    return NextResponse.json({ error: "Missing 'message'" }, { status: 400 });
-  }
-
-  const persona = body.persona === "advocate" ? "advocate" : "citizen";
-
-  // ── Real path: Gemini ──
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (apiKey) {
-    try {
-      const history = (body.history || []).map((h) => ({
-        role: h.role === "assistant" ? ("model" as const) : ("user" as const),
-        text: h.content,
-      }));
-      const reply = await callGemini(
-        [...history, { role: "user", text: message }],
-        PERSONA_INSTRUCTIONS[persona]
-      );
-      const out: ChatResponseBody = { reply, source: "gemini" };
-      return NextResponse.json(out);
-    } catch (err) {
-      console.error("[/api/chat] Gemini failed → mock fallback:", err instanceof Error ? err.message : err);
-    }
-  }
-
-  // ── Mock fallback (missing key or real call failed) ──
-  const reply = mockChatReply(message, persona);
-  const out: ChatResponseBody = { reply, source: "mock" };
-  return NextResponse.json(out);
+    if (!body || typeof body.message !== "string" || !body.message.trim() || body.message.length > 8000) throw new AIError("input", "Enter a message of up to 8,000 characters.", false, 400);
+    if (body.history && (!Array.isArray(body.history) || body.history.length > 100 || body.history.some(h => !h || !["user", "assistant"].includes(h.role) || typeof h.content !== "string" || h.content.length > 16000))) throw new AIError("input", "Conversation history is invalid or too long.", false, 400);
+    const persona = body.persona === "advocate" ? "advocate" : "citizen";
+    if (body.mode === "demo") return Response.json({ reply: mockChatReply(body.message, persona), source: "mock" }, { headers: { "Cache-Control": "no-store" } });
+    requireAIConsent(body);
+    // Retain recent complete turns under a fixed text budget; never fetch case data implicitly.
+    const history: ChatMessage[] = []; let length = body.message.length;
+    for (const item of (body.history || []).slice(-12).reverse()) { if (length + item.content.length > 22000) break; history.unshift(item); length += item.content.length; }
+    const input = { primary: "gemini" as const, system: PERSONA[persona], messages: [...history, { role: "user" as const, content: body.message.trim() }], signal: req.signal, maxTokens: 1024 };
+    if (body.stream) return aiStreamResponse(input, (reply, source, metadata) => ({ reply, source, metadata }));
+    const generated = await generateAI(input);
+    return Response.json({ reply: generated.text, source: generated.metadata.provider, metadata: generated.metadata }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) { return aiErrorResponse(error); }
 }

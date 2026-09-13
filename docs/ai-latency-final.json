@@ -1,0 +1,59 @@
+{
+  "note": "Single local development measurement per request; not a controlled speed comparison. Early SSE headers are progress, not generated content.",
+  "results": [
+    {
+      "name": "chat-json",
+      "measuredAt": "2026-09-13T13:27:09.954Z",
+      "httpStatus": 200,
+      "headersMs": 3713,
+      "firstContentMs": 3714,
+      "totalMs": 3715,
+      "source": "gemini",
+      "metadata": {
+        "provider": "gemini",
+        "model": "gemini-3.5-flash",
+        "fallback": false,
+        "attempts": 1,
+        "firstResponseMs": 3698,
+        "totalMs": 3698
+      },
+      "error": null
+    },
+    {
+      "name": "chat-stream",
+      "measuredAt": "2026-09-13T13:27:13.032Z",
+      "httpStatus": 200,
+      "headersMs": 14,
+      "firstContentMs": 2961,
+      "totalMs": 3062,
+      "source": "gemini",
+      "metadata": {
+        "provider": "gemini",
+        "model": "gemini-3.5-flash",
+        "fallback": false,
+        "attempts": 1,
+        "firstResponseMs": 2949,
+        "totalMs": 3050
+      },
+      "error": null
+    },
+    {
+      "name": "draft-stream",
+      "measuredAt": "2026-09-13T13:27:39.351Z",
+      "httpStatus": 200,
+      "headersMs": 18,
+      "firstContentMs": 25865,
+      "totalMs": 26191,
+      "source": "gemini",
+      "metadata": {
+        "provider": "gemini",
+        "model": "gemini-3.5-flash",
+        "fallback": true,
+        "attempts": 3,
+        "firstResponseMs": 25850,
+        "totalMs": 26174
+      },
+      "error": null
+    }
+  ]
+}

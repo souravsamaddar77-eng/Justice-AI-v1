@@ -1,20 +1,7 @@
-const { extractTextWithOcr } = require('./lib/ocr');
-
-const fs = require('fs');
-const base64 = fs.readFileSync('./test.pdf', { encoding: 'base64' });
-
-console.log('Testing OCR with base64 length:', base64.length);
-console.log('OCR_SPACE_API_KEY from env:', process.env.OCR_SPACE_API_KEY ? 'present' : 'missing');
-
-extractTextWithOcr(base64, 'PDF')
-  .then(result => {
-    console.log('OCR Result:', result);
-    if (result.error) {
-      console.error('OCR Error:', result.error);
-    } else {
-      console.log('OCR Text:', result.text.substring(0, 200) + (result.text.length > 200 ? '...' : ''));
-    }
-  })
-  .catch(err => {
-    console.error('Failed to call OCR:', err);
-  });
+// Backward-compatible entry point. Only fixed synthetic fixtures are used.
+// `node test-ocr.js` is deterministic; `node test-ocr.js --live` tests OCR.space.
+const { spawnSync } = require('node:child_process');
+const live = process.argv.includes('--live');
+const args = live ? ['node_modules/tsx/dist/cli.mjs', 'scripts/verify-ocr-live.ts'] : ['node_modules/tsx/dist/cli.mjs', '--test', 'tests/ocr.test.ts'];
+const result = spawnSync(process.execPath, args, { cwd: __dirname, stdio: 'inherit', windowsHide: true });
+process.exitCode = result.status ?? 1;

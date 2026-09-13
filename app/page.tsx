@@ -1,135 +1,16 @@
 import Link from "next/link";
-import {
-  Scale,
-  ScanText,
-  MessageSquare,
-  ArrowLeftRight,
-  UserRound,
-  Briefcase,
-  ShieldCheck,
-  ArrowRight,
-} from "lucide-react";
-import FeatureCard from "@/components/FeatureCard";
-
-export default function LandingPage() {
-  return (
-    <>
-      {/* ─────────── HERO ─────────── */}
-      <section className="relative overflow-hidden bg-navy-900 text-white">
-        {/* Background flourish */}
-        <div className="pointer-events-none absolute inset-0 opacity-40">
-          <div className="absolute -left-20 top-10 h-72 w-72 rounded-full bg-gold-500/20 blur-3xl" />
-          <div className="absolute right-0 top-40 h-80 w-80 rounded-full bg-navy-700/30 blur-3xl" />
-          <div className="absolute inset-x-0 top-0 h-1 justice-stripe" />
-        </div>
-
-        <div className="relative mx-auto max-w-6xl px-4 py-20 sm:py-28">
-          {/* Badge */}
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-sm text-navy-200">
-            <ShieldCheck className="h-4 w-4 text-gold-400" />
-            <span>AI for the Indian Legal System · Hackathon Prototype</span>
-          </div>
-
-          {/* Title */}
-          <h1 className="max-w-3xl font-serif text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-            Justice AI: <span className="text-brand-gradient">Empowering Citizens,</span> Equipping Advocates
-          </h1>
-          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-navy-300">
-            Decode complex legal notices into plain language and clear deadlines — or co-pilot your legal
-            workflow with an IPC↔BNS converter and AI document drafting.
-          </p>
-
-          {/* Two entry buttons */}
-          <div className="mt-9 flex flex-col gap-4 sm:flex-row">
-            <Link href="/victim-citizen" className="btn-primary text-base">
-              <UserRound className="h-5 w-5" />
-              I am a Victim/Citizen (Get Legal Help)
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link href="/advocate" className="btn-secondary text-base bg-white/10 text-white hover:bg-white/20 hover:text-white">
-              <Briefcase className="h-5 w-5" />
-              I am an Advocate (Workspace)
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-
-          {/* Trust strip */}
-          <div className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-navy-400">
-            <span className="flex items-center gap-2"><Scale className="h-4 w-4 text-gold-400" /> Powered by Gemini & NVIDIA Nemotron</span>
-            <span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-gold-400" /> Auto-redaction built in</span>
-            <span className="flex items-center gap-2"><ArrowLeftRight className="h-4 w-4 text-gold-400" /> IPC ↔ BNS 2023 mapping</span>
-          </div>
-        </div>
-      </section>
-
-      {/* ─────────── FEATURES ─────────── */}
-      <section className="mx-auto max-w-6xl px-4 py-16 sm:py-20">
-        <div className="mb-10 text-center">
-          <p className="eyebrow">What Justice AI does</p>
-          <h2 className="mt-2 font-serif text-3xl font-semibold text-navy-900">Three tools, one mission</h2>
-          <div className="gold-rule mx-auto mt-4" />
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-3">
-          <FeatureCard
-            icon={ScanText}
-            title="Document Analysis"
-            description="Upload a legal notice and get an urgency rating, a statutory deadline tracker, and a 3-point plain-language summary anyone can understand."
-          />
-          <FeatureCard
-            icon={MessageSquare}
-            title="AI Legal Chatbot"
-            description="Ask follow-up questions like 'What happens if I ignore this notice?' and get instant, simple answers from the Justice AI assistant."
-            accent
-          />
-          <FeatureCard
-            icon={ArrowLeftRight}
-            title="IPC ↔ BNS Converter"
-            description="Search any old IPC section and instantly see the corresponding Bharatiya Nyaya Sanhita (2023) section — no more hunting through statutes."
-          />
-        </div>
-      </section>
-
-      {/* ─────────── SPLIT CTA ─────────── */}
-      <section className="mx-auto max-w-6xl px-4 pb-20">
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Citizen card */}
-          <Link
-            href="/victim-citizen"
-            className="group relative overflow-hidden rounded-2xl border border-navy-200 bg-white p-8 transition-all hover:-translate-y-0.5 hover:shadow-lg"
-          >
-            <div className="absolute right-0 top-0 h-24 w-24 -translate-y-8 translate-x-8 rounded-full bg-gold-100" />
-            <span className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-navy-900">
-              <UserRound className="h-6 w-6 text-gold-300" />
-            </span>
-            <h3 className="relative mt-5 font-serif text-2xl font-semibold text-navy-900">For Citizens</h3>
-            <p className="relative mt-2 text-navy-600">
-              Got a confusing legal notice? Upload it, understand it, and act before the deadline.
-            </p>
-            <span className="relative mt-4 inline-flex items-center gap-1.5 font-semibold text-gold-700 group-hover:text-gold-600">
-              Enter Citizen Portal <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </span>
-          </Link>
-
-          {/* Advocate card */}
-          <Link
-            href="/advocate"
-            className="group relative overflow-hidden rounded-2xl border border-white/10 bg-navy-900 p-8 text-white transition-all hover:-translate-y-0.5 hover:shadow-lg"
-          >
-            <div className="absolute right-0 top-0 h-24 w-24 -translate-y-8 translate-x-8 rounded-full bg-gold-500/20" />
-            <span className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-gold-500">
-              <Briefcase className="h-6 w-6 text-navy-950" />
-            </span>
-            <h3 className="relative mt-5 font-serif text-2xl font-semibold">For Advocates</h3>
-            <p className="relative mt-2 text-navy-300">
-              Convert IPC to BNS in one search and draft bail applications, replies, and notices with an AI co-pilot.
-            </p>
-            <span className="relative mt-4 inline-flex items-center gap-1.5 font-semibold text-gold-300 group-hover:text-gold-200">
-              Enter Advocate Workspace <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </span>
-          </Link>
-        </div>
-      </section>
-    </>
-  );
+import { ArrowRight, ArrowUpRight, FileSearch, FolderOpen, MessageSquare, PenLine, Compass, BookOpen, Scale, FileText, LockKeyhole, Check } from "lucide-react";
+export default function Home() {
+  return <div className="home-workspace">
+    <div className="home-intro"><div><p className="welcome-line">Your legal workspace</p><h1>A clearer way forward.</h1><p>Understand your situation. Organize your case. Take the next step.</p></div><Link href="/cases" className="btn-secondary"><FolderOpen size={17}/>Open my cases</Link></div>
+    <section className="start-panel" aria-labelledby="start-title">
+      <div className="start-copy"><span className="start-symbol"><Scale size={24}/></span><h2 id="start-title">Received a legal notice?<br/>Start with understanding it.</h2><p>Turn a complicated notice into a plain-language summary, key points and questions to discuss with your advocate.</p><Link className="btn-primary" href="/victim-citizen"><FileSearch size={18}/>Understand my notice<ArrowRight size={17}/></Link><span className="start-note">Use the tool directly. Save to a case when you’re ready.</span></div>
+      <div className="notice-preview" aria-label="Illustration of a notice and a plain-language summary"><div className="paper-sheet"><span className="paper-caption"><FileText size={17}/>Legal notice</span><div className="paper-line long"/><div className="paper-line"/><div className="paper-line short"/><div className="paper-highlight"><div className="paper-line long"/><div className="paper-line"/></div><div className="paper-line"/><div className="paper-line short"/><div className="paper-seal"><Scale size={24}/></div></div><div className="summary-preview"><span><Check size={15}/>A little easier to understand</span><p>What does it say?</p><p>What should I review?</p><p>What can I do next?</p></div><span className="preview-label">From legal language to a clear next step</span></div>
+    </section>
+    <section className="home-tools" aria-labelledby="quick-tools"><div className="section-heading"><h2 id="quick-tools">How can we help?</h2><Link href="/tools">Explore all tools<ArrowRight size={16}/></Link></div><div className="quick-tools">
+      {[{title:"Ask a legal question",body:"Talk it through by voice or text.",href:"/citizen/voice-assistant",icon:MessageSquare},{title:"Prepare a document",body:"Create a first draft for review.",href:"/advocate?tool=drafting",icon:PenLine},{title:"Find legal support",body:"Explore lawyers and free legal aid.",href:"/citizen#legal-aid",icon:Compass},{title:"Research the law",body:"Find sections, precedents and judgments.",href:"/advocate/precedents",icon:BookOpen}].map(({title,body,href,icon:Icon}) => <Link href={href} className="quick-tool" key={title}><span className="tool-icon"><Icon size={21}/></span><h3>{title}</h3><p>{body}</p><ArrowUpRight className="quick-arrow" size={17}/></Link>)}
+    </div></section>
+    <section className="case-intro"><div className="case-illustration" aria-hidden="true"><FolderOpen size={42} strokeWidth={1.3}/><span><LockKeyhole size={15}/></span></div><div><h2>One case. Everything in its place.</h2><p>Keep original documents, conversations and drafts together. Track next steps and choose what to share with your advocate.</p><Link href="/cases">Set up your case workspace<ArrowRight size={16}/></Link></div><div className="case-features"><span><Check size={16}/>Documents and versions</span><span><Check size={16}/>Tasks and reviewed drafts</span><span><Check size={16}/>Sharing you control</span></div></section>
+    <div className="home-paths"><Link href="/citizen"><span>Looking for guidance?</span><strong>Explore citizen tools <ArrowRight size={16}/></strong></Link><Link href="/advocate"><span>Working on a client’s matter?</span><strong>Open advocate tools <ArrowRight size={16}/></strong></Link></div>
+  </div>;
 }

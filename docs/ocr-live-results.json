@@ -1,0 +1,80 @@
+{
+  "measuredAt": "2026-09-13T13:39:16.550Z",
+  "syntheticFixturesOnly": true,
+  "results": [
+    {
+      "filename": "digital.pdf",
+      "success": true,
+      "expectedTextFound": true,
+      "method": "native",
+      "pages": 1,
+      "pageOrder": [
+        1
+      ],
+      "methods": [
+        "native"
+      ],
+      "totalMs": 690
+    },
+    {
+      "filename": "scanned.pdf",
+      "success": true,
+      "expectedTextFound": true,
+      "method": "ocr",
+      "pages": 1,
+      "pageOrder": [
+        1
+      ],
+      "methods": [
+        "ocr"
+      ],
+      "totalMs": 2003
+    },
+    {
+      "filename": "text.png",
+      "success": true,
+      "expectedTextFound": true,
+      "method": "ocr",
+      "pages": 1,
+      "pageOrder": [
+        1
+      ],
+      "methods": [
+        "ocr"
+      ],
+      "totalMs": 1490
+    },
+    {
+      "filename": "text.jpg",
+      "success": true,
+      "expectedTextFound": true,
+      "method": "ocr",
+      "pages": 1,
+      "pageOrder": [
+        1
+      ],
+      "methods": [
+        "ocr"
+      ],
+      "totalMs": 1349
+    },
+    {
+      "filename": "mixed.pdf",
+      "success": true,
+      "expectedTextFound": true,
+      "method": "mixed",
+      "pages": 3,
+      "pageOrder": [
+        1,
+        2,
+        3
+      ],
+      "methods": [
+        "native",
+        "ocr",
+        "native"
+      ],
+      "totalMs": 1094
+    }
+  ]
+}

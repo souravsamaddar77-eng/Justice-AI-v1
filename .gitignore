@@ -25,3 +25,9 @@ yarn-error.log*
 # editor
 .vscode/
 .idea/
+
+# Generated verification artifacts
+workspace-*.png
+baseline-chat-*.json
+tmp/
+dependency-audit.json

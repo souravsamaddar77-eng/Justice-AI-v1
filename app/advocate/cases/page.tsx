@@ -180,8 +180,9 @@ export default function CasesPage() {
     return (
       <div className="bg-navy-50/40 min-h-screen">
         {/* Header */}
-        <section className="border-b border-navy-200/70 bg-navy-900 text-white">
+        <section data-page-header className="border-b border-navy-200/70 bg-navy-900 text-white">
           <div className="mx-auto max-w-6xl px-4 py-10">
+        <div className="demo-notice">Case intake demonstration: the client conversations and generated briefs below are samples. Real shared cases are available in My cases.</div>
             <span className="eyebrow text-gold-400">Advocate Portal</span>
             <h1 className="mt-2 flex items-center gap-3 font-serif text-3xl font-bold">
               <Briefcase className="h-9 w-9 text-gold-300" />
@@ -195,6 +196,7 @@ export default function CasesPage() {
         </section>
 
         <div className="mx-auto max-w-6xl px-4 py-10">
+        <div className="demo-notice">Case intake demonstration: the client conversations and generated briefs below are samples. Real shared cases are available in My cases.</div>
           {/* Sessions Grid */}
           <div className="card-surface p-6">
             <div className="flex items-center justify-between mb-6">
@@ -232,7 +234,7 @@ export default function CasesPage() {
   return (
     <div className="bg-navy-50/40 min-h-screen">
       {/* Header */}
-      <section className="border-b border-navy-200/70 bg-navy-900 text-white">
+      <section data-page-header className="border-b border-navy-200/70 bg-navy-900 text-white">
         <div className="mx-auto max-w-6xl px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

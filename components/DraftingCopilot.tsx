@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Wand2, Loader2, Copy, Check, FileText, Download } from "lucide-react";
-import { jsPDF } from "jspdf";
+import AIConsent, { useAIConsent } from "./AIConsent";
+import SaveToCase from "./SaveToCase";
+import { readAIResponse } from "@/lib/ai-client";
 import type { DocumentType, DraftResponseBody } from "@/types";
 
 const DOC_OPTIONS: { value: DocumentType; label: string }[] = [
@@ -25,12 +27,17 @@ export default function DraftingCopilot() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [partial, setPartial] = useState("");
+  const [stage, setStage] = useState("");
+  const request = useRef<AbortController | null>(null);
+  const ai = useAIConsent();
+  useEffect(() => () => request.current?.abort(), []);
 
   async function generate(e: React.FormEvent) {
     e.preventDefault();
+    if (request.current || !ai.ready) return;
     setBusy(true);
     setError("");
-    setResult(null);
 
     // Form validation
     if (!clientName.trim()) {
@@ -49,26 +56,32 @@ export default function DraftingCopilot() {
       return;
     }
 
+    const controller = new AbortController();
+    request.current = controller;
+    setPartial("");
+    setStage("Preparing your draft…");
     try {
       const res = await fetch("/api/draft-document", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientName, issue, date, documentType, additionalNotes }),
+        signal: controller.signal,
+        body: JSON.stringify({ clientName, issue, date, documentType, additionalNotes, ...ai.requestOptions, stream: true }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: DraftResponseBody = await res.json();
+      const data = await readAIResponse<DraftResponseBody>(res, delta => setPartial(prev => prev + delta), setStage);
       setResult(data);
-    } catch {
-      setError("Could not generate the draft. Try again.");
+      setPartial("");
+    } catch (error) {
+      setError(controller.signal.aborted ? "Cancelled. Your form, previous draft and partial output are retained." : error instanceof Error ? error.message : "Could not generate the draft. Your input is retained.");
     } finally {
+      request.current = null;
       setBusy(false);
     }
   }
 
-  function copyDoc() {
+  async function copyDoc() {
     if (!result) return;
     try {
-      navigator.clipboard.writeText(result.document);
+      await navigator.clipboard.writeText(result.document);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch (err) {
@@ -80,8 +93,9 @@ export default function DraftingCopilot() {
   }
 
   /** Generate a PDF from the drafted document text. */
-  function downloadPdf() {
+  async function downloadPdf() {
     if (!result) return;
+    const { jsPDF } = await import("jspdf");
     const doc = new jsPDF();
     const lines = doc.splitTextToSize(result.document, 180);
     let y = 20;
@@ -89,6 +103,9 @@ export default function DraftingCopilot() {
     doc.setFontSize(14);
     doc.text(result.title, 10, y);
     y += 10;
+    doc.setFontSize(8);
+    doc.text(result.source === "mock" ? "DEMO SAMPLE — SIMULATED / NOT REVIEWED" : "UNREVIEWED AI DRAFT — Requires advocate review", 10, y);
+    y += 8;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     for (const line of lines) {
@@ -172,7 +189,8 @@ export default function DraftingCopilot() {
           </Field>
         </div>
 
-        <button type="submit" disabled={busy} className="btn-primary mt-5 w-full disabled:opacity-60">
+        <div className="mt-5"><AIConsent value={ai} /></div>
+        <button type="submit" disabled={busy || !ai.ready} className="btn-primary mt-4 w-full disabled:opacity-60">
           {busy ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" /> Drafting…
@@ -183,7 +201,8 @@ export default function DraftingCopilot() {
             </>
           )}
         </button>
-        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+        {busy && <button type="button" onClick={() => request.current?.abort()} className="mt-2 rounded-lg border border-navy-200 py-2 text-sm text-navy-700">Cancel generation</button>}
+        {error && <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>}
       </form>
 
       {/* RIGHT — preview */}
@@ -215,21 +234,21 @@ export default function DraftingCopilot() {
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-navy-50/30 p-5">
-          {busy ? (
-            <div className="flex h-full flex-col items-center justify-center gap-3 text-navy-400">
-              <Loader2 className="h-7 w-7 animate-spin text-gold-500" />
-              <p className="text-sm">Generating your legal document…</p>
-            </div>
-          ) : result ? (
+        <div className="flex-1 overflow-y-auto bg-navy-50/30 p-5" aria-live="polite">
+          {busy && <p className="mb-4 flex items-center gap-2 text-sm text-navy-500"><Loader2 className="h-4 w-4 animate-spin text-gold-500" />{stage}</p>}
+          {partial && <article className="mb-5 rounded-xl border border-gold-200 bg-gold-50/50 p-4"><p className="mb-3 text-xs font-semibold text-gold-800">{busy ? "Draft in progress" : "Incomplete draft · not saved or exportable"}</p><pre className="whitespace-pre-wrap font-serif text-sm leading-relaxed text-navy-800">{partial}</pre></article>}
+          {result ? (
             <article className="prose-sm">
               {/* Source banner */}
               <div className="mb-3">
                 <SourceBadge source={result.source} />
+                <p className="mt-2 text-xs text-navy-500">Unreviewed AI draft · Check facts and applicable law before use.</p>
+                {result.metadata && <p className="mt-1 text-[11px] text-navy-500">{result.metadata.model} · First content {(result.metadata.firstResponseMs / 1000).toFixed(1)}s · Total {(result.metadata.totalMs / 1000).toFixed(1)}s</p>}
               </div>
               <pre className="whitespace-pre-wrap font-serif text-sm leading-relaxed text-navy-800">
                 {result.document}
               </pre>
+              {result.source !== "mock" && <div className="mt-4"><SaveToCase kind="draft" title={result.title} content={result.document} metadata={{ source: result.source, ai: result.metadata, reviewState: "ai_draft" }} /></div>}
             </article>
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-navy-400">
@@ -274,6 +293,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function SourceBadge({ source }: { source: string }) {
   const map: Record<string, { label: string; cls: string }> = {
     nemotron: { label: "Nemotron", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200" },
+    gemini: { label: "Gemini", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200" },
     mock: { label: "Demo mock", cls: "bg-amber-50 text-amber-700 ring-amber-200" },
   };
   const s = map[source] || { label: source, cls: "bg-navy-100 text-navy-700 ring-navy-200" };

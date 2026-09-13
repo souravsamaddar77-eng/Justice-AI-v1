@@ -1,3 +1,4 @@
+import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
@@ -18,9 +19,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <ClerkProvider
+          signInUrl="/sign-in"
+          signUpUrl="/sign-up"
+          signInFallbackRedirectUrl="/cases"
+          signUpFallbackRedirectUrl="/cases"
+          localization={{ signIn: { start: { title: "Sign in to Justice AI", titleCombined: "Sign in to Justice AI" } } }}
+          appearance={{ variables: { colorPrimary: "#16243b", borderRadius: "0.75rem", fontFamily: "Segoe UI, system-ui, sans-serif" } }}
+        >
+          <Navbar />
+          <div className="app-frame"><main id="main-content" className="app-content" tabIndex={-1}>{children}</main><Footer /></div>
+        </ClerkProvider>
       </body>
     </html>
   );

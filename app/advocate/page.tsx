@@ -1,79 +1,26 @@
 "use client";
-
-import { Briefcase, ArrowLeftRight, Wand2, Info, Gavel } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeftRight, PenLine, Gavel, FolderOpen } from "lucide-react";
+import PageHeader from "@/components/PageHeader";
 import IpBnsConverter from "@/components/IpBnsConverter";
 import DraftingCopilot from "@/components/DraftingCopilot";
 import LokAdalatUpdates from "@/components/LokAdalatUpdates";
 import ChatWidget from "@/components/ChatWidget";
-
-export default function AdvocatePage() {
-  return (
-    <div className="bg-navy-50/40">
-      {/* Header */}
-      <section className="border-b border-navy-200/70 bg-navy-900 text-white">
-        <div className="mx-auto max-w-6xl px-4 py-10">
-          <span className="eyebrow text-gold-400">Advocate Portal</span>
-          <h1 className="mt-2 flex items-center gap-3 font-serif text-3xl font-bold">
-            <Briefcase className="h-8 w-8 text-gold-300" /> Advocate Workspace
-          </h1>
-          <p className="mt-2 max-w-2xl text-navy-300">
-            Three tools for a faster practice — convert old IPC sections to the new BNS 2023, draft
-            bail applications, replies, and notices with an AI co-pilot, and track Lok Adalat schedules
-            across West Bengal districts.
-          </p>
-        </div>
-      </section>
-
-      <div className="mx-auto max-w-6xl space-y-12 px-4 py-12">
-        {/* ───────── IPC ↔ BNS converter ───────── */}
-        <section>
-          <div className="mb-4 flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-navy-900 text-gold-300">
-              <ArrowLeftRight className="h-5 w-5" />
-            </span>
-            <div>
-              <h2 className="font-serif text-2xl font-semibold text-navy-900">IPC ↔ BNS Converter</h2>
-              <p className="text-sm text-navy-500">Search any IPC section to find the matching BNS 2023 section.</p>
-            </div>
-          </div>
-          <IpBnsConverter />
-          <p className="mt-3 flex items-center gap-1.5 text-xs text-navy-500">
-            <Info className="h-3.5 w-3.5 text-gold-600" />
-            Sample mapping subset — verify against the official BNS 2023 text before real-world use.
-          </p>
-        </section>
-
-        {/* ───────── Drafting co-pilot ───────── */}
-        <section>
-          <div className="mb-4 flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-navy-900 text-gold-300">
-              <Wand2 className="h-5 w-5" />
-            </span>
-            <div>
-              <h2 className="font-serif text-2xl font-semibold text-navy-900">Drafting Co-Pilot</h2>
-              <p className="text-sm text-navy-500">Fill the form on the left; AI drafts the document on the right.</p>
-            </div>
-          </div>
-          <DraftingCopilot />
-        </section>
-
-        {/* ───────── Lok Adalat Updates ───────── */}
-        <section>
-          <div className="mb-4 flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-navy-900 text-gold-300">
-              <Gavel className="h-5 w-5" />
-            </span>
-            <div>
-              <h2 className="font-serif text-2xl font-semibold text-navy-900">Lok Adalat Updates</h2>
-              <p className="text-sm text-navy-500">Search and filter Lok Adalat sittings across all West Bengal districts.</p>
-            </div>
-          </div>
-          <LokAdalatUpdates />
-        </section>
-      </div>
-
-      {/* Floating chatbot (advocate persona) */}
-      <ChatWidget persona="advocate" />
-    </div>
-  );
+const tabs = [{id:"drafting",title:"Draft a document",icon:PenLine},{id:"converter",title:"IPC to BNS",icon:ArrowLeftRight},{id:"lok-adalat",title:"Lok Adalat",icon:Gavel}];
+function AdvocateWorkspace() {
+  const params = useSearchParams();
+  const router = useRouter();
+  const selectedTool = params.get("tool");
+  const [active,setActive] = useState("drafting");
+  useEffect(() => { const target = selectedTool || window.location.hash.slice(1); setActive(tabs.some(tab => tab.id === target) ? target : "drafting"); }, [selectedTool]);
+  const select = (id:string) => {setActive(id); router.replace(`/advocate?tool=${id}`, {scroll:false});};
+  return <div className="workspace-page"><PageHeader eyebrow="Advocate tools" title="Make room for the work that matters." description="Draft, look up sections and plan for mediation. Your case documents stay in My cases." actions={<Link href="/cases" className="btn-secondary"><FolderOpen size={17}/>My cases</Link>}/><div className="focus-tabs" role="tablist" aria-label="Advocate tools">{tabs.map(({id,title,icon:Icon},index)=><button key={id} role="tab" id={`tab-${id}`} aria-controls={id} aria-selected={active===id} tabIndex={active===id?0:-1} onClick={()=>select(id)} onKeyDown={e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();const next=tabs[(index+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length];select(next.id);document.getElementById(`tab-${next.id}`)?.focus();}}}><Icon size={17}/>{title}</button>)}</div>
+  <section id="drafting" role="tabpanel" aria-labelledby="tab-drafting" hidden={active!=="drafting"}><DraftingCopilot/></section>
+  <section id="converter" role="tabpanel" aria-labelledby="tab-converter" hidden={active!=="converter"}><h2 className="text-xl font-semibold mb-2">IPC to BNS converter</h2><p className="text-sm text-navy-500 mb-5">Search the sample mapping. Verify the relevant provision against official legislation.</p><IpBnsConverter/></section>
+  <section id="lok-adalat" role="tabpanel" aria-labelledby="tab-lok-adalat" hidden={active!=="lok-adalat"}><h2 className="text-xl font-semibold mb-2">Lok Adalat updates</h2><p className="text-sm text-navy-500 mb-5">Search sittings in West Bengal and check the linked authority before making plans.</p><LokAdalatUpdates/></section>
+  <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-navy-600"><Link href="/advocate/cases">Case intake demo</Link><Link href="/advocate/draft-review">Draft review demo</Link><Link href="/advocate/precedents">Precedents & judgments</Link><Link href="/advocate/network">Advocate network</Link></div><ChatWidget persona="advocate"/></div>;
 }
+
+export default function AdvocatePage() { return <Suspense fallback={<div className="workspace-page" role="status">Opening advocate tools…</div>}><AdvocateWorkspace/></Suspense>; }

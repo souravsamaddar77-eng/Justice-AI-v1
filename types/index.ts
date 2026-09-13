@@ -4,6 +4,15 @@
 
 /** Tag identifying which backend produced a response. */
 export type Source = "gemini" | "nemotron" | "mock";
+export interface AIRequestOptions {
+  mode?: "live" | "demo";
+  consent?: { providers: ("gemini" | "nemotron")[]; ocr?: boolean };
+  stream?: boolean;
+}
+export interface AIMetadata {
+  provider: "gemini" | "nemotron"; model: string; fallback: boolean; attempts: number;
+  firstResponseMs: number; totalMs: number;
+}
 
 /* ─────────── Web Speech API types ─────────── */
 
@@ -56,7 +65,7 @@ export interface ChatMessage {
   content: string;
 }
 
-export interface ChatRequestBody {
+export interface ChatRequestBody extends AIRequestOptions {
   message: string;
   // Earlier turns, most-recent-last. Lets the model keep context.
   history?: ChatMessage[];
@@ -67,25 +76,32 @@ export interface ChatRequestBody {
 export interface ChatResponseBody {
   reply: string;
   source: Source;
+  metadata?: AIMetadata;
 }
 
 /* ─────────── Document analysis (Gemini) ─────────── */
 
 export type Urgency = "High" | "Medium" | "Low";
 
-export interface AnalyzeRequestBody {
+export interface AnalyzeRequestBody extends AIRequestOptions {
   /** Text extracted from the uploaded notice. May be empty for a UI-only demo. */
   text: string;
   /** Original filename, used as a fallback signal for mock mode. */
   filename?: string;
+  fileBase64?: string;
+  redact?: boolean;
 }
 
 export interface AnalyzeResponseBody {
   urgency: Urgency;
   /** Days remaining to respond, derived from statutory deadlines. */
-  daysToRespond: number;
+  daysToRespond: number | null;
   /** Human-readable date string (ISO short form). Absolute date computed server-side. */
-  deadlineDate: string;
+  deadlineDate: string | null;
+  deadlineStatus?: "unconfirmed" | "unknown";
+  deadlineSource?: string | null;
+  extractionMethod?: "none" | "native" | "ocr" | "mixed";
+  metadata?: AIMetadata;
   summary: string[];
   /** Key legal terms detected in the notice. */
   keyTerms: string[];
@@ -100,7 +116,7 @@ export type DocumentType =
   | "affidavit"
   | "legal_notice_draft";
 
-export interface DraftRequestBody {
+export interface DraftRequestBody extends AIRequestOptions {
   clientName: string;
   issue: string;
   date: string;
@@ -113,6 +129,7 @@ export interface DraftResponseBody {
   title: string;
   document: string;
   source: Source;
+  metadata?: AIMetadata;
 }
 
 /* ─────────── IPC ↔ BNS converter (local dataset) ─────────── */

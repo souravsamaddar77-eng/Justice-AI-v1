@@ -324,8 +324,9 @@ ${i + 1}. [${a.severity.toUpperCase()}] ${TYPE_LABELS[a.type]}: ${a.title}
   return (
     <div className="bg-navy-50/40 min-h-screen">
       {/* Header */}
-      <section className="border-b border-navy-200/70 bg-navy-900 text-white">
+      <section data-page-header className="border-b border-navy-200/70 bg-navy-900 text-white">
         <div className="mx-auto max-w-6xl px-4 py-10">
+        <div className="demo-notice">Simulated review: the anomaly detector and scan animation use sample findings. They do not verify your document. Use My cases to record an actual version-specific review.</div>
           <span className="eyebrow text-gold-400">Advocate Portal</span>
           <h1 className="mt-2 flex items-center gap-3 font-serif text-3xl font-bold">
             <FileSearch className="h-9 w-9 text-gold-300" />
@@ -339,6 +340,7 @@ ${i + 1}. [${a.severity.toUpperCase()}] ${TYPE_LABELS[a.type]}: ${a.title}
       </section>
 
       <div className="mx-auto max-w-6xl px-4 py-10">
+        <div className="demo-notice">Simulated review: the anomaly detector and scan animation use sample findings. They do not verify your document. Use My cases to record an actual version-specific review.</div>
         {/* Upload Zone */}
         {!anomalies.length && !isAnalyzing && (
           <UploadZone onUpload={handleFileUpload} uploadedFile={uploadedFile} onAnalyze={handleAnalyze} />

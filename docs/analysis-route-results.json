@@ -1,0 +1,32 @@
+[
+  {
+    "filename": "digital.pdf",
+    "status": 200,
+    "source": "gemini",
+    "extractionMethod": "native",
+    "deadlineDate": null,
+    "deadlineStatus": "unknown",
+    "summaryValidated": true,
+    "extractionRetained": true,
+    "totalMs": 4944
+  },
+  {
+    "filename": "scanned.pdf",
+    "status": 200,
+    "source": "gemini",
+    "extractionMethod": "ocr",
+    "deadlineDate": null,
+    "deadlineStatus": "unknown",
+    "summaryValidated": true,
+    "extractionRetained": true,
+    "totalMs": 6800
+  },
+  {
+    "filename": "corrupt.pdf",
+    "status": 422,
+    "summaryValidated": false,
+    "extractionRetained": false,
+    "code": "pdf_invalid",
+    "totalMs": 17
+  }
+]

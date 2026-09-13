@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   UserRound,
   MapPin,
@@ -27,6 +27,9 @@ import DeadlineTracker from "@/components/DeadlineTracker";
 import UrgencyBadge from "@/components/UrgencyBadge";
 import ChatWidget from "@/components/ChatWidget";
 import type { AnalyzeResponseBody } from "@/types";
+import PageHeader from "@/components/PageHeader";
+import SaveToCase from "@/components/SaveToCase";
+import AIConsent, { useAIConsent } from "@/components/AIConsent";
 
 // ──────────────────────────────────────────────────────────────
 // Data
@@ -148,7 +151,7 @@ const WB_LAWYERS: Lawyer[] = [
     location: "Kolkata, Park Street",
     phone: "+91-33-22XX-XXXX",
     email: "amitava.chatterjee@lawfirm.in",
-    link: "hhttps://westbengal.nalsa.gov.in/scheme/scheme-for-para-legal-volunteers/",
+    link: "https://westbengal.nalsa.gov.in/scheme/scheme-for-para-legal-volunteers/",
   },
   {
     id: "lawyer-2",
@@ -229,7 +232,7 @@ function StateSelector({
         <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-navy-400 pointer-events-none" />
       </div>
       <p className="mt-1.5 text-xs text-navy-500">
-        Currently only West Bengal has live data. Other states coming soon.
+        West Bengal resources are available. Other states are not yet included.
       </p>
     </div>
   );
@@ -281,7 +284,8 @@ function SchemeCard({ scheme, searchQuery }: { scheme: Scheme; searchQuery: stri
 
   const highlight = (text: string) => {
     if (!searchQuery) return <span>{text}</span>;
-    const parts = text.split(new RegExp(`(${searchQuery})`, "gi"));
+    const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, (character) => "\\" + character);
+    const parts = text.split(new RegExp(`(${escapedQuery})`, "gi"));
     return (
       <>
         {parts.map((part, i) =>
@@ -340,7 +344,8 @@ function LawyerCard({ lawyer, searchQuery }: { lawyer: Lawyer; searchQuery: stri
 
   const highlight = (text: string) => {
     if (!searchQuery) return <span>{text}</span>;
-    const parts = text.split(new RegExp(`(${searchQuery})`, "gi"));
+    const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, (character) => "\\" + character);
+    const parts = text.split(new RegExp(`(${escapedQuery})`, "gi"));
     return (
       <>
         {parts.map((part, i) =>
@@ -370,7 +375,7 @@ function LawyerCard({ lawyer, searchQuery }: { lawyer: Lawyer; searchQuery: stri
               <h3 className="font-semibold text-navy-900">{highlight(lawyer.name)}</h3>
               <p className="text-sm text-navy-500">{highlight(lawyer.specialization)}</p>
             </div>
-            <ShieldCheck className="h-5 w-5 text-gold-500 flex-shrink-0 mt-0.5" aria-label="Verified Panel Lawyer" />
+            <ShieldCheck className="h-5 w-5 text-gold-500 flex-shrink-0 mt-0.5" aria-label="Sample directory profile" />
           </div>
           <div className="mt-2 flex flex-wrap gap-3 text-sm text-navy-600">
             <span className="flex items-center gap-1">
@@ -621,32 +626,50 @@ function LawyerRecommendationSection({
 // ──────────────────────────────────────────────────────────────
 
 function DocumentAnalysisSection() {
+  const ai = useAIConsent();
+  const pending = useRef<AbortController | null>(null);
+  // Only this page instance retains extraction; nothing is shared with other users.
+  const extractionCache = useRef<{ file: string; redact: boolean; text: string; method: string; config: string; sha256: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [analysis, setAnalysis] = useState<AnalyzeResponseBody | null>(null);
   const [error, setError] = useState("");
 
-  async function analyze(text: string, filename: string, fileBase64?: string) {
+  async function analyze(text: string, filename: string, fileBase64?: string, options?: { redact: boolean }) {
+    if (pending.current) return;
+    if (!ai.ready) { setError("Choose demo mode or accept the processing preference before analyzing."); return; }
+    const controller = new AbortController(); pending.current = controller;
     setBusy(true);
     setError("");
-    setAnalysis(null);
     try {
+      let cached = fileBase64 && extractionCache.current?.file === fileBase64 && extractionCache.current.redact === (options?.redact !== false) ? extractionCache.current : null;
+      if (cached) {
+        const settings = await fetch("/api/ai/config", { cache: "no-store", signal: controller.signal }).then(response => response.json());
+        if (settings.extractionConfig !== cached.config) cached = null;
+      }
       const res = await fetch("/api/analyze-document", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, filename, fileBase64 }),
+        body: JSON.stringify({ text: cached?.text || text, filename, fileBase64: cached ? undefined : fileBase64, redact: options?.redact, ...ai.requestOptions }),
+        signal: controller.signal,
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: AnalyzeResponseBody = await res.json();
+      const data = await res.json();
+      if (fileBase64 && data.extraction?.text && typeof data.extraction.config === "string") extractionCache.current = { file: fileBase64, redact: options?.redact !== false, ...data.extraction };
+      if (!res.ok) throw new Error(data.error || "Analysis is unavailable. Please retry.");
+      if (cached) data.extractionMethod = cached.method;
       setAnalysis(data);
-    } catch {
-      setError("Sorry, analysis failed. Please try again.");
+    } catch (failure) {
+      setError(controller.signal.aborted ? "Analysis cancelled. Your input is still here." : failure instanceof Error ? failure.message : "Analysis failed. Your input is still here; retry or paste the document text.");
     } finally {
+      pending.current = null;
       setBusy(false);
     }
   }
 
   return (
     <section className="space-y-6">
+      <AIConsent value={ai} includeOCR />
+      {busy && <button className="btn-secondary" onClick={() => pending.current?.abort()}>Cancel analysis</button>}
+      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
       <div className="flex items-center gap-2 font-semibold text-navy-900 mb-4">
         <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-navy-900 text-gold-300">
           <Upload className="h-5 w-5" />
@@ -683,6 +706,7 @@ function DocumentAnalysisSection() {
             </h2>
             <div className="flex items-center gap-3">
               <SourcePill source={analysis.source} />
+              <SaveToCase kind="analysis" title="Notice analysis" content={analysis.summary.join("\n\n")} metadata={{ urgency: analysis.urgency, deadline_date: analysis.deadlineDate, deadline_source: analysis.deadlineSource, deadline_status: "unconfirmed", source: analysis.source }} disabled={analysis.source === "mock"} />
               <button
                 onClick={() => setAnalysis(null)}
                 className="rounded-xl border border-navy-300 bg-white px-3.5 py-1.5 text-sm font-medium text-navy-600 hover:border-gold-400 hover:text-navy-900"
@@ -733,8 +757,7 @@ function DocumentAnalysisSection() {
           <div className="flex items-start gap-2 rounded-xl border border-gold-200 bg-gold-50/60 p-4 text-sm text-navy-700">
             <Info className="mt-0.5 h-4 w-4 text-gold-600" />
             <p>
-              This prototype analyzes the filename or pasted text. Auto-redaction masks Aadhaar/PAN/phone
-              patterns client-side before display. Connect a real PDF parser for full extraction.
+              This is an AI reading of the supplied text, not a reviewed legal opinion. Check the original notice and confirm any suggested dates before acting.
             </p>
           </div>
 
@@ -768,6 +791,8 @@ function SourcePill({ source }: { source: string }) {
 
 export default function CitizenPortalPage() {
   const [selectedState, setSelectedState] = useState<State>("West Bengal");
+  const [activeSection, setActiveSection] = useState("notice");
+  useEffect(() => { const sync = () => setActiveSection(window.location.hash === "#support" ? "support" : "notice"); sync(); window.addEventListener("hashchange",sync); return () => window.removeEventListener("hashchange",sync); }, []);
   const [globalSearch, setGlobalSearch] = useState("");
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -812,21 +837,11 @@ export default function CitizenPortalPage() {
 
   return (
     <div className="bg-navy-50/40 min-h-screen">
-      {/* Header */}
-      <section className="border-b border-navy-200/70 bg-navy-900 text-white">
-        <div className="mx-auto max-w-6xl px-4 py-10">
-          <span className="eyebrow text-gold-400">Victim / Citizen Portal</span>
-          <h1 className="mt-2 flex items-center gap-3 font-serif text-3xl font-bold sm:text-4xl">
-            <UserRound className="h-9 w-9 text-gold-300" /> Legal Aid, Document Analysis & Lawyer Finder
-          </h1>
-          <p className="mt-2 max-w-2xl text-navy-300">
-            Upload a legal notice for AI-powered analysis, or browse state legal aid services, government schemes,
-            and verified panel lawyers near you. Select your state to get started.
-          </p>
-        </div>
-      </section>
-
-      <div className="mx-auto max-w-6xl px-4 py-10">
+      <div className="workspace-page">
+        <PageHeader eyebrow="Citizen tools" title="Understand your legal notice." description="Read the key points in plain language, then decide on your next step." />
+        <div className="focus-tabs" aria-label="Notice and legal support views">{[{id:"notice",title:"Understand a notice"},{id:"support",title:"State legal support"}].map(tab=><button key={tab.id} aria-pressed={activeSection===tab.id} className={activeSection===tab.id ? "bg-white border border-navy-200 font-semibold" : ""} onClick={()=>{setActiveSection(tab.id);window.history.replaceState(null,"",'#'+tab.id);}}>{tab.title}</button>)}</div>
+        <div hidden={activeSection!=="notice"}><DocumentAnalysisSection /></div>
+        <div hidden={activeSection!=="support"}>
         {/* State Selector + Global Search */}
         <div className="card-surface p-6 mb-8">
           <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -843,7 +858,7 @@ export default function CitizenPortalPage() {
         {/* Content Sections */}
         <div className="space-y-8">
           {/* Document Analysis (Restored Feature) */}
-          <DocumentAnalysisSection />
+
 
           {/* Legal Aid Locator */}
           <section>
@@ -890,19 +905,20 @@ export default function CitizenPortalPage() {
           </div>
         </div>
 
+        </div>
         {/* Footer info */}
-        <div className="mt-12 rounded-xl border border-navy-200 bg-white p-6 text-sm text-navy-600">
+        <details className="mt-8 rounded-xl border border-navy-200 bg-white p-5 text-sm text-navy-600"><summary className="cursor-pointer font-medium">About the information in this portal</summary><div className="mt-4">
           <h3 className="font-semibold text-navy-900 mb-3 flex items-center gap-2">
             <Info className="h-4 w-4 text-gold-500" /> About This Portal
           </h3>
           <ul className="space-y-2 list-disc list-inside">
             <li>Data sourced from <a href="https://nalsa.gov.in/" target="_blank" rel="noopener noreferrer" className="text-gold-600 hover:underline">NALSA</a> and state legal services authorities.</li>
-            <li>Currently only <strong>West Bengal</strong> has live data. Other states will be added as APIs become available.</li>
-            <li>Lawyer information is from the official panel advocates list. Verify credentials before engagement.</li>
+            <li>Currently only <strong>West Bengal</strong> has curated resources and demonstration profiles. Other states will be added as APIs become available.</li>
+            <li>Lawyer profiles here are demonstration directory entries, not verified Justice AI accounts. Use official directories to check credentials.</li>
             <li>Geolocation is used only to find nearby lawyers. Your precise location is never stored.</li>
             <li>Document analysis uses AI (Gemini) to extract key information from uploaded legal notices. Results are informational only.</li>
           </ul>
-        </div>
+        </div></details>
       </div>
 
       {/* Floating chatbot */}

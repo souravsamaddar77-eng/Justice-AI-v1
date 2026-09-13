@@ -1,4 +1,5 @@
 "use client";
+import CaseTaskPicker from "@/components/cases/CaseTaskPicker";
 
 import { useState, useEffect } from "react";
 import {
@@ -177,8 +178,9 @@ export default function ActionTrackerPage() {
   return (
     <div className="bg-navy-50/40 min-h-screen">
       {/* Header */}
-      <section className="border-b border-navy-200/70 bg-navy-900 text-white">
+      <section data-page-header className="border-b border-navy-200/70 bg-navy-900 text-white">
         <div className="mx-auto max-w-6xl px-4 py-10">
+        <div className="demo-notice">This is a sample action plan. Its dates and completion marks are for this demonstration only. Open a saved case for persistent tasks.</div>
           <span className="eyebrow text-gold-400">Citizen Portal</span>
           <h1 className="mt-2 flex items-center gap-3 font-serif text-3xl font-bold sm:text-4xl">
             <CalendarClock className="h-9 w-9 text-gold-300" />
@@ -191,12 +193,14 @@ export default function ActionTrackerPage() {
       </section>
 
       <div className="mx-auto max-w-6xl px-4 py-10">
+        <div className="demo-notice">This is a sample action plan. Its dates and completion marks are for this demonstration only. Open a saved case for persistent tasks.</div>
+        <CaseTaskPicker />
         {/* Progress Header */}
         <div className="card-surface p-6 mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
               <h2 className="font-serif text-2xl font-semibold text-navy-900">Your Action Roadmap</h2>
-              <p className="mt-1 text-navy-600">Based on your legal notice analysis — {highUrgencyCount} high-priority item{highUrgencyCount !== 1 ? "s" : ""} requiring immediate attention</p>
+              <p className="mt-1 text-navy-600">Sample notice roadmap: {highUrgencyCount} high-priority item{highUrgencyCount !== 1 ? "s" : ""} requiring immediate attention</p>
             </div>
             <div className="flex flex-wrap items-center gap-4">
               {/* Progress bar */}

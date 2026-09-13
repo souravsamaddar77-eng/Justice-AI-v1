@@ -4,9 +4,10 @@ export default function DeadlineTracker({
   daysToRespond,
   deadlineDate,
 }: {
-  daysToRespond: number;
-  deadlineDate: string;
+  daysToRespond: number | null;
+  deadlineDate: string | null;
 }) {
+  if (daysToRespond === null || !deadlineDate) return <div className="card-surface flex items-center gap-4 p-5"><CalendarClock className="h-6 w-6 shrink-0 text-navy-500"/><div><p className="text-sm font-semibold">No confirmed response date</p><p className="mt-2 text-sm text-navy-500">Review the notice with an advocate before setting a deadline.</p></div></div>;
   const overdue = daysToRespond <= 0;
   const tight = daysToRespond > 0 && daysToRespond <= 7;
 
@@ -19,11 +20,11 @@ export default function DeadlineTracker({
         <CalendarClock className="h-6 w-6" />
       </div>
       <div className="min-w-0">
-        <p className="text-xs font-semibold uppercase tracking-wider text-navy-500">Statutory deadline</p>
+        <p className="text-xs font-semibold text-navy-500">Suggested response date · needs review</p>
         <p className={`text-2xl font-bold ${ring}`}>
           {overdue ? "Overdue" : `${daysToRespond} day${daysToRespond === 1 ? "" : "s"}`}
         </p>
-        <p className="text-sm text-navy-500">Respond by {deadlineDate}</p>
+        <p className="text-sm text-navy-500">Date identified: {deadlineDate}</p>
       </div>
       {tight && !overdue && (
         <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">

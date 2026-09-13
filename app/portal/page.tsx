@@ -9,7 +9,7 @@ function PortalGatewayContent() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Check for role in URL params (for demo) or localStorage (for real auth)
+    // Check for role in URL params (for demo) or localStorage (demo preference only)
     const roleParam = searchParams.get("role");
     const storedRole = localStorage.getItem("justice_ai_role");
 
@@ -131,7 +131,7 @@ function PortalGatewayContent() {
         <div className="mt-8 p-4 rounded-xl bg-amber-50 border border-amber-200">
           <p className="text-sm text-amber-800 text-center">
             <strong>Demo Mode:</strong> Role selection is stored in localStorage.
-            In production, this would use JWT-based authentication with role claims.
+            This preference only changes the demo view. Sign in from My cases to save or share private material.
           </p>
         </div>
 
