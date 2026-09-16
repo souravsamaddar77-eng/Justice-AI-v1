@@ -13,10 +13,9 @@ import type { ChatMessage, ChatResponseBody, SpeechRecognition } from "@/types";
 
 export interface ConversationMessage extends ChatMessage { language: Language; result?: ChatResponseBody }
 
-function useChatSessionState() {
+function useChatSessionState(userId: string | null | undefined, isLoaded: boolean) {
   const { language } = usePreferences();
   const pathname = usePathname();
-  const { userId, isLoaded } = useAuth();
   const copy = chatCopy(language);
   const [input, setInput] = useState("");
   const [origin, setOrigin] = useState<PromptOrigin>("typed");
@@ -216,9 +215,20 @@ function useChatSessionState() {
 }
 
 const ChatSessionContext = createContext<ReturnType<typeof useChatSessionState> | null>(null);
-export function ChatSessionProvider({ children }: { children: ReactNode }) {
-  const session = useChatSessionState();
+function SessionProvider({ children, userId, isLoaded }: { children: ReactNode; userId: string | null | undefined; isLoaded: boolean }) {
+  const session = useChatSessionState(userId, isLoaded);
   return <ChatSessionContext.Provider value={session}>{children}</ChatSessionContext.Provider>;
+}
+
+function ClerkChatSessionProvider({ children }: { children: ReactNode }) {
+  const { userId, isLoaded } = useAuth();
+  return <SessionProvider userId={userId} isLoaded={isLoaded}>{children}</SessionProvider>;
+}
+
+export function ChatSessionProvider({ children, authAvailable }: { children: ReactNode; authAvailable: boolean }) {
+  return authAvailable
+    ? <ClerkChatSessionProvider>{children}</ClerkChatSessionProvider>
+    : <SessionProvider userId={null} isLoaded>{children}</SessionProvider>;
 }
 
 export function useChatSession() {

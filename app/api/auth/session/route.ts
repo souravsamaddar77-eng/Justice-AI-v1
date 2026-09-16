@@ -14,6 +14,7 @@ export const GET = route(async () => NextResponse.json({ ...status(), user: awai
 export const POST = route(async request => {
   const body = await jsonBody(request);
   if (body.action !== "signout") throw new CaseError(409, "Use the Clerk sign-in or create-account screen to authenticate.", "CLERK_AUTH_REQUIRED");
+  if (!authConfigured()) throw new CaseError(503, AUTH_SETUP_MESSAGE, "SETUP_REQUIRED");
   const { sessionId } = await auth();
   if (sessionId) await (await clerkClient()).sessions.revokeSession(sessionId);
   return NextResponse.json({ ...status(), user: null });

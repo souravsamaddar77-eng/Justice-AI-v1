@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import ApplicationProviders from "@/components/ApplicationProviders";
 import ChatWidget from "@/components/ChatWidget";
 import { PREFERENCES_INIT_SCRIPT } from "@/lib/preferences";
+import { authConfigured } from "@/lib/auth/config";
 
 export const metadata: Metadata = {
   title: "Justice AI — Empowering Citizens, Equipping Advocates",
@@ -30,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: PREFERENCES_INIT_SCRIPT }} /></head>
       <body className="min-h-screen flex flex-col">
-        <ApplicationProviders>
+        <ApplicationProviders authAvailable={authConfigured()}>
           <Navbar />
           <div className="app-frame"><main id="main-content" className="app-content" tabIndex={-1}>{children}</main><Footer /></div>
           <ChatWidget />

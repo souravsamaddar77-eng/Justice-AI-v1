@@ -1,11 +1,10 @@
 import "server-only";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { CaseError } from "@/lib/cases/validation";
+import { authConfigured } from "./config";
+export { authConfigured } from "./config";
 
 export const AUTH_SETUP_MESSAGE = "Connect the Clerk application with clerk env pull to enable sign-in.";
-export function authConfigured() {
-  return Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim() && process.env.CLERK_SECRET_KEY?.trim());
-}
 
 export interface AuthIdentity { subject: string; email: string; legacyUserId?: string }
 export async function getAuthIdentity(required = true): Promise<AuthIdentity | null> {

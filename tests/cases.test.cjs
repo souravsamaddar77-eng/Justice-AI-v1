@@ -13,6 +13,7 @@ const originalFetch = global.fetch;
 const originalTs = require.extensions['.ts'];
 let jar = new Map();
 let clerkActor = null;
+let clerkMiddlewareCalls = 0;
 const clerkId = id => `user_${id.replaceAll('-', '')}`;
 const emails = { '11111111-1111-4111-8111-111111111111': 'owner@example.test', '22222222-2222-4222-8222-222222222222': 'advocate@example.test', '33333333-3333-4333-8333-333333333333': 'stranger@example.test' };
 let extractionCalls = 0;
@@ -23,6 +24,7 @@ require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileMo
 Module._load = function(request, parent, isMain) {
   if (request === 'server-only') return {};
   if (request === '@clerk/nextjs/server') return {
+    clerkMiddleware: () => async () => { clerkMiddlewareCalls++; return new Response(null); },
     auth: async () => ({ userId: clerkActor?.id || null, sessionId: clerkActor ? 'sess_synthetic' : null }),
     currentUser: async () => clerkActor,
     clerkClient: async () => ({ sessions: { revokeSession: async () => { clerkActor = null; } } }),
@@ -39,6 +41,7 @@ const items = require('../lib/cases/items.ts');
 const exporter = require('../lib/cases/export.ts');
 const pdf = require('../lib/cases/pdf.ts');
 const { updateSession } = require('../utils/supabase/middleware.ts');
+const middleware = require('../middleware.ts').default;
 const { NextRequest } = require('next/server');
 const routes = {
   session: require('../app/api/auth/session/route.ts'),
@@ -381,6 +384,37 @@ test('missing Clerk configuration never accepts an old Supabase session', async 
   assert.equal(await server.currentUser(false), null);
   await assert.rejects(server.currentUser(), error => error.status === 503 && error.code === 'SETUP_REQUIRED');
   assert.equal(requests.length, 0);
+});
+
+test('missing Clerk keys keep public middleware available while private APIs fail closed', async () => {
+  for (const missing of ['NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY', 'CLERK_SECRET_KEY']) {
+    const previous = process.env[missing];
+    process.env[missing] = '   ';
+    try {
+      const calls = clerkMiddlewareCalls;
+      const response = await middleware(new NextRequest('https://justice.test/citizen'), {});
+      assert.equal(response.headers.get('x-middleware-next'), '1');
+      assert.equal(clerkMiddlewareCalls, calls);
+      const detail = await routes.detail.GET(new NextRequest(`https://justice.test/api/cases/${ids.case}`), { params: Promise.resolve({ id: ids.case }) });
+      assert.equal(detail.status, 503);
+      assert.equal((await detail.json()).code, 'SETUP_REQUIRED');
+      const session = await routes.session.GET(new NextRequest('https://justice.test/api/auth/session'));
+      const body = await session.json();
+      assert.equal(body.authConfigured, false);
+      assert.equal(body.user, null);
+      const logout = await routes.session.POST(new NextRequest('https://justice.test/api/auth/session', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'signout' }) }));
+      assert.equal(logout.status, 503);
+      assert.equal(requests.length, 0);
+    } finally {
+      process.env[missing] = previous;
+    }
+  }
+});
+
+test('configured middleware delegates authentication to Clerk', async () => {
+  const calls = clerkMiddlewareCalls;
+  await middleware(new NextRequest('https://justice.test/cases'), {});
+  assert.equal(clerkMiddlewareCalls, calls + 1);
 });
 
 test('parallel legacy linking accepts the same Clerk subject and rejects a different one', async () => {

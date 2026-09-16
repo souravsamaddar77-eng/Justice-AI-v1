@@ -1,12 +1,17 @@
 "use client";
 
 import { ClerkProvider } from "@clerk/nextjs";
+import { createContext, useContext } from "react";
 import { PreferencesProvider, usePreferences } from "./PreferencesProvider";
 import { ChatSessionProvider } from "./chat/ChatSessionProvider";
 
-function ThemedApplication({ children }: { children: React.ReactNode }) {
+const AuthAvailabilityContext = createContext(false);
+export const useAuthAvailable = () => useContext(AuthAvailabilityContext);
+
+function ThemedApplication({ children, authAvailable }: { children: React.ReactNode; authAvailable: boolean }) {
   const { resolvedTheme, t } = usePreferences();
   const dark = resolvedTheme === "dark";
+  if (!authAvailable) return <ChatSessionProvider authAvailable={false}>{children}</ChatSessionProvider>;
   return <ClerkProvider
     signInUrl="/sign-in"
     signUpUrl="/sign-up"
@@ -26,9 +31,9 @@ function ThemedApplication({ children }: { children: React.ReactNode }) {
       },
       elements: { formButtonPrimary: { color: dark ? "#101a2a" : "#ffffff" } },
     }}
-  ><ChatSessionProvider>{children}</ChatSessionProvider></ClerkProvider>;
+  ><ChatSessionProvider authAvailable>{children}</ChatSessionProvider></ClerkProvider>;
 }
 
-export default function ApplicationProviders({ children }: { children: React.ReactNode }) {
-  return <PreferencesProvider><ThemedApplication>{children}</ThemedApplication></PreferencesProvider>;
+export default function ApplicationProviders({ children, authAvailable }: { children: React.ReactNode; authAvailable: boolean }) {
+  return <AuthAvailabilityContext.Provider value={authAvailable}><PreferencesProvider><ThemedApplication authAvailable={authAvailable}>{children}</ThemedApplication></PreferencesProvider></AuthAvailabilityContext.Provider>;
 }
