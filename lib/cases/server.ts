@@ -3,17 +3,16 @@ import { NextResponse } from "next/server";
 import type { CaseActivity, CaseDetail, CaseInvitation, CaseItem, CasePermission, CaseRecord, CaseReview, CaseUser } from "@/types/cases";
 import { casePermission, itemPermission, permits } from "./permissions";
 import { CaseError, sameOrigin, uuid } from "./validation";
-import { getServerSupabaseConfig } from "@/utils/supabase/server-config";
+import { getCaseStorageConfig } from "@/utils/supabase/server-config";
 import { authConfigured, getAuthIdentity, type AuthIdentity } from "@/lib/auth/clerk";
 export { AUTH_SETUP_MESSAGE, authConfigured } from "@/lib/auth/clerk";
 
-export const SETUP_MESSAGE = "Private cases need Clerk sign-in, Supabase URL/public key, a server-only SUPABASE_SECRET_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY), and both SQL files in supabase/migrations (case storage and Clerk account mapping). Standalone tools remain available.";
+export const SETUP_MESSAGE = "Case storage is not ready. Configure the Supabase project URL and a server-only SUPABASE_SECRET_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY), then apply both migrations and create the private justice-case-documents bucket. Run npm run storage:check for the exact missing step.";
 export const BUCKET = "justice-case-documents";
-export function configured() { return authConfigured() && !!getServerSupabaseConfig() && !!(process.env.SUPABASE_SECRET_KEY?.trim() || process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()); }
+export function configured() { return authConfigured() && !!getCaseStorageConfig(); }
 export function config() {
   if (!configured()) throw new CaseError(503, SETUP_MESSAGE, "SETUP_REQUIRED");
-  const { url, key } = getServerSupabaseConfig()!;
-  return { url, anon: key, service: (process.env.SUPABASE_SECRET_KEY?.trim() || process.env.SUPABASE_SERVICE_ROLE_KEY?.trim())! };
+  return getCaseStorageConfig()!;
 }
 
 function serviceHeaders(service: string) {
@@ -46,6 +45,7 @@ export async function db<T>(table: Table, query: Record<string, string> = {}, me
     if (response.status === 409) throw new CaseError(409, "This record changed or already exists. Refresh the case and try again.");
     const error = await response.json().catch(() => ({}));
     if (error.code === "42P01" || error.code === "PGRST205") throw new CaseError(503, SETUP_MESSAGE, "SETUP_REQUIRED");
+    if ([401, 403].includes(response.status) || error.code === "42501") throw new CaseError(503, "Case storage credentials or table grants are invalid. Check the server-only Supabase secret and apply both migrations; keep browser access restricted.", "STORAGE_ACCESS_DENIED");
     throw new CaseError(503, "Case storage could not complete this request. Check the database migration and retry.", "STORAGE_ERROR");
   }
   if (response.status === 204) return [];
@@ -132,14 +132,25 @@ export async function activity(ctx: CaseContext, action: string, objectType: str
 }
 export async function storage(path: string, init: RequestInit = {}) {
   const { url, service } = config();
+  const removing = init.method === "DELETE";
   let response: Response;
   try {
-    response = await fetch(`${url}/storage/v1/object/${BUCKET}/${path.split("/").map(encodeURIComponent).join("/")}`, {
+    response = await fetch(`${url}/storage/v1/object/${BUCKET}${removing ? "" : `/${path.split("/").map(encodeURIComponent).join("/")}`}`, {
       ...init, cache: "no-store", signal: AbortSignal.timeout(30_000),
-      headers: { ...serviceHeaders(service), ...init.headers },
+      headers: { ...serviceHeaders(service), ...(removing ? { "Content-Type": "application/json" } : {}), ...init.headers },
+      ...(removing ? { body: JSON.stringify({ prefixes: [path] }) } : {}),
     });
   } catch { throw new CaseError(503, "Private file storage is unavailable. Please retry."); }
-  if (!response.ok) throw new CaseError(503, "Private file storage could not complete this request. Check the private bucket setup.");
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    const code = String(error.code || error.error || "");
+    const message = String(error.message || "");
+    if (code === "NoSuchBucket" || /bucket.*not found/i.test(message)) throw new CaseError(503, "The private document bucket is missing. Run npm run storage:setup after configuring the server key.", "STORAGE_BUCKET_MISSING");
+    if ([401, 403].includes(response.status) || /access.?denied|invalid.?jwt/i.test(code)) throw new CaseError(503, "The server could not access private Storage. Check the Supabase secret key and Storage policies; a public/anon key cannot upload private cases.", "STORAGE_ACCESS_DENIED");
+    if (response.status === 413 || /size|large/i.test(code)) throw new CaseError(413, "This upload exceeds the private bucket size limit. Choose a file up to 3 MB.", "STORAGE_SIZE_LIMIT");
+    if (response.status === 409) throw new CaseError(409, "This upload already exists. Retry to create a separate version.", "STORAGE_CONFLICT");
+    throw new CaseError(503, "Private file storage could not complete this request. Run npm run storage:check and retry.", "STORAGE_ERROR");
+  }
   return response;
 }
 export function route(fn: (request: Request, args: { params: Record<string, string> }) => Promise<Response>) {

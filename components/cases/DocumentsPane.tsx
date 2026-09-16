@@ -37,7 +37,6 @@ export default function DocumentsPane({
   const [compareFile, setCompareFile] = useState<File | null>(null);
   const [manual, setManual] = useState<string | null>(null);
   const [manualText, setManualText] = useState("");
-  const [extractConsent, setExtractConsent] = useState(false);
   async function upload(event: FormEvent) {
     event.preventDefault();
     if (!file) return;
@@ -303,30 +302,17 @@ export default function DocumentsPane({
                         )}
                         {editable(data, item) && (
                           <div style={{ marginTop: 18 }}>
-                            <label
-                              className="case-check"
-                              style={{ fontWeight: 400 }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={extractConsent}
-                                onChange={(e) =>
-                                  setExtractConsent(e.target.checked)
-                                }
-                              />
-                              <span className="case-muted">
-                                If needed, allow this document to be sent to
-                                OCR.space for text extraction. Digital PDF and
-                                plain-text extraction runs on the server first.
-                              </span>
-                            </label>
+                            <p className="case-muted">
+                              Digital PDF and plain-text extraction runs on the server.
+                              Scanned pages use OCR.space when you choose Extract text.
+                            </p>
                             <div
                               className="case-actions"
                               style={{ marginTop: 12 }}
                             >
                               <button
                                 className="case-small-button"
-                                disabled={busy || !extractConsent}
+                                disabled={busy}
                                 onClick={() =>
                                   run(
                                     () =>
@@ -336,8 +322,6 @@ export default function DocumentsPane({
                                           method: "POST",
                                           body: JSON.stringify({
                                             action: "extract",
-                                            consent: true,
-                                            allowExternalProcessing: true,
                                           }),
                                         },
                                       ),

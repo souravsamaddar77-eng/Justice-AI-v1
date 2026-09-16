@@ -10,6 +10,7 @@ import {
   Send,
 } from "lucide-react";
 import { caseDate, caseRequest } from "@/lib/case-client";
+import { toPlainText } from "@/lib/plain-text";
 import type { CaseItem, ReviewStatus } from "@/types/cases";
 import {
   type CasePaneProps,
@@ -341,7 +342,7 @@ export default function SavedWorkPane({
                         paddingRight: 12,
                       }}
                     >
-                      {selected.content}
+                      {selected.kind === "note" ? selected.content : toPlainText(selected.content || "")}
                     </div>
                     {selected.metadata.source_item_id && (
                       <SourceReference

@@ -25,11 +25,11 @@ import FileUpload from "@/components/FileUpload";
 import SummaryCard from "@/components/SummaryCard";
 import DeadlineTracker from "@/components/DeadlineTracker";
 import UrgencyBadge from "@/components/UrgencyBadge";
-import ChatWidget from "@/components/ChatWidget";
 import type { AnalyzeResponseBody } from "@/types";
 import PageHeader from "@/components/PageHeader";
 import SaveToCase from "@/components/SaveToCase";
-import AIConsent, { useAIConsent } from "@/components/AIConsent";
+import { usePreferences } from "@/components/PreferencesProvider";
+import { toPlainText } from "@/lib/plain-text";
 
 // ──────────────────────────────────────────────────────────────
 // Data
@@ -626,7 +626,7 @@ function LawyerRecommendationSection({
 // ──────────────────────────────────────────────────────────────
 
 function DocumentAnalysisSection() {
-  const ai = useAIConsent();
+  const { language, t } = usePreferences();
   const pending = useRef<AbortController | null>(null);
   // Only this page instance retains extraction; nothing is shared with other users.
   const extractionCache = useRef<{ file: string; redact: boolean; text: string; method: string; config: string; sha256: string } | null>(null);
@@ -636,7 +636,6 @@ function DocumentAnalysisSection() {
 
   async function analyze(text: string, filename: string, fileBase64?: string, options?: { redact: boolean }) {
     if (pending.current) return;
-    if (!ai.ready) { setError("Choose demo mode or accept the processing preference before analyzing."); return; }
     const controller = new AbortController(); pending.current = controller;
     setBusy(true);
     setError("");
@@ -649,7 +648,7 @@ function DocumentAnalysisSection() {
       const res = await fetch("/api/analyze-document", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: cached?.text || text, filename, fileBase64: cached ? undefined : fileBase64, redact: options?.redact, ...ai.requestOptions }),
+        body: JSON.stringify({ text: cached?.text || text, filename, fileBase64: cached ? undefined : fileBase64, redact: options?.redact, language }),
         signal: controller.signal,
       });
       const data = await res.json();
@@ -667,15 +666,15 @@ function DocumentAnalysisSection() {
 
   return (
     <section className="space-y-6">
-      <AIConsent value={ai} includeOCR />
-      {busy && <button className="btn-secondary" onClick={() => pending.current?.abort()}>Cancel analysis</button>}
+      <p className="text-xs text-navy-500">{t("Submitted text is processed by external AI services. Scanned pages use OCR.space for text extraction.")}</p>
+      {busy && <button className="btn-secondary" onClick={() => pending.current?.abort()}>{t("Cancel analysis")}</button>}
       {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
       <div className="flex items-center gap-2 font-semibold text-navy-900 mb-4">
         <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-navy-900 text-gold-300">
           <Upload className="h-5 w-5" />
         </span>
         <div>
-          <h2 className="font-serif text-2xl font-semibold text-navy-900">Document Analysis</h2>
+          <h2 className="font-serif text-2xl font-semibold text-navy-900">{t("Document Analysis")}</h2>
           <p className="text-sm text-navy-500">Upload a legal notice (PDF, image, or text). Justice AI will read it, flag urgency, track deadlines, and explain in plain language.</p>
         </div>
       </div>
@@ -706,12 +705,15 @@ function DocumentAnalysisSection() {
             </h2>
             <div className="flex items-center gap-3">
               <SourcePill source={analysis.source} />
-              <SaveToCase kind="analysis" title="Notice analysis" content={analysis.summary.join("\n\n")} metadata={{ urgency: analysis.urgency, deadline_date: analysis.deadlineDate, deadline_source: analysis.deadlineSource, deadline_status: "unconfirmed", source: analysis.source }} disabled={analysis.source === "mock"} />
+              <SaveToCase kind="analysis" title="Notice analysis" content={analysis.summary.map(toPlainText).join("\n\n")} metadata={{ urgency: analysis.urgency, deadline_date: analysis.deadlineDate, deadline_source:
+  typeof analysis.deadlineSource === "string"
+    ? analysis.deadlineSource.slice(0, 2000)
+    : JSON.stringify(analysis.deadlineSource ?? "").slice(0, 2000), deadline_status: "unconfirmed", source: analysis.source }} disabled={analysis.source === "mock"} />
               <button
                 onClick={() => setAnalysis(null)}
                 className="rounded-xl border border-navy-300 bg-white px-3.5 py-1.5 text-sm font-medium text-navy-600 hover:border-gold-400 hover:text-navy-900"
               >
-                Analyze another notice
+                {t("Analyze another notice")}
               </button>
             </div>
           </div>
@@ -744,7 +746,7 @@ function DocumentAnalysisSection() {
               {analysis.keyTerms.length > 0 ? (
                 analysis.keyTerms.map((t, i) => (
                   <span key={i} className="rounded-lg bg-navy-100 px-3 py-1.5 text-sm font-medium text-navy-700">
-                    {t}
+                    {toPlainText(t)}
                   </span>
                 ))
               ) : (
@@ -773,8 +775,9 @@ function DocumentAnalysisSection() {
 
 function SourcePill({ source }: { source: string }) {
   const map: Record<string, { label: string; cls: string }> = {
-    gemini: { label: "Gemini", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200" },
-    nemotron: { label: "Nemotron", cls: "bg-blue-50 text-blue-700 ring-blue-200" },
+    gemini: { label: "AI-generated", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200" },
+    groq: { label: "AI-generated", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200" },
+    nemotron: { label: "AI-generated", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200" },
     mock: { label: "Demo mock", cls: "bg-amber-50 text-amber-700 ring-amber-200" },
   };
   const s = map[source] || { label: source, cls: "bg-navy-100 text-navy-700 ring-navy-200" };
@@ -838,7 +841,7 @@ export default function CitizenPortalPage() {
   return (
     <div className="bg-navy-50/40 min-h-screen">
       <div className="workspace-page">
-        <PageHeader eyebrow="Citizen tools" title="Understand your legal notice." description="Read the key points in plain language, then decide on your next step." />
+        <PageHeader eyebrow="Citizen tools" title="Understand a notice" description="Read a legal notice in plain language." />
         <div className="focus-tabs" aria-label="Notice and legal support views">{[{id:"notice",title:"Understand a notice"},{id:"support",title:"State legal support"}].map(tab=><button key={tab.id} aria-pressed={activeSection===tab.id} className={activeSection===tab.id ? "bg-white border border-navy-200 font-semibold" : ""} onClick={()=>{setActiveSection(tab.id);window.history.replaceState(null,"",'#'+tab.id);}}>{tab.title}</button>)}</div>
         <div hidden={activeSection!=="notice"}><DocumentAnalysisSection /></div>
         <div hidden={activeSection!=="support"}>
@@ -922,7 +925,6 @@ export default function CitizenPortalPage() {
       </div>
 
       {/* Floating chatbot */}
-      <ChatWidget persona="citizen" />
     </div>
   );
 }

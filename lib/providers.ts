@@ -1,4 +1,4 @@
-export type ProviderId = "gemini" | "nemotron";
+export type ProviderId = "gemini" | "groq" | "nemotron";
 export class AIError extends Error {
   constructor(public code: string, message: string, public retryable: boolean, public status = 503, public retryAfterMs?: number) { super(message); this.name = "AIError"; }
 }
@@ -6,6 +6,8 @@ export interface AIMetadata { provider: ProviderId; model: string; fallback: boo
 export interface AIInput {
   system: string; messages: { role: "user" | "assistant"; content: string }[]; maxTokens?: number; json?: boolean; signal?: AbortSignal;
   validate?: (text: string) => void; onDelta?: (delta: string) => void; onStage?: (stage: string) => void;
+  /** Clear a failed attempt before replacement output is emitted. */
+  onReset?: () => void;
 }
 export interface AIProvider {
   id: ProviderId; model: string; capabilities: ("text" | "stream")[];
@@ -28,7 +30,7 @@ async function attempt<T>(operation: (signal: AbortSignal) => Promise<T>, parent
 }
 export async function runProviders(input: AIInput, providers: AIProvider[], policy: RunPolicy): Promise<{ text: string; metadata: AIMetadata }> {
   if (!input.messages.length || input.messages.some(m => typeof m.content !== "string" || !m.content.trim()) || input.messages.reduce((n, m) => n + m.content.length, 0) > 60_000) throw new AIError("input", "The request is empty or too large. Use a shorter document or conversation.", false, 400);
-  if (!providers.length) throw new AIError("setup", "No live AI provider is configured. Choose demo mode or configure a provider.", false, 503);
+  if (!providers.length) throw new AIError("setup", "AI is not configured. Add GEMINI_API_KEY and GROQ_API_KEY to the server environment.", false, 503);
   const started = Date.now(); const deadline = started + policy.deadlineMs; let attempts = 0;
   let lastError = new AIError("unavailable", "AI providers are cooling down after an outage. Please retry shortly.", true, 503);
   for (let index = 0; index < providers.length; index++) {
@@ -40,7 +42,7 @@ export async function runProviders(input: AIInput, providers: AIProvider[], poli
       const remaining = deadline - Date.now();
       if (remaining <= 0) throw new AIError("timeout", "The overall AI deadline was reached. Your input is retained; retry shortly.", true, 504);
       let emitted = false; let firstResponseMs = 0; attempts++;
-      input.onStage?.(index ? "Trying the approved secondary provider…" : retry ? "Retrying a temporary provider error…" : "Connecting to the AI provider…");
+      input.onStage?.("Preparing your answer…");
       try {
         const text = await attempt(signal => provider.generate(input, signal, input.onDelta ? delta => {
           if (signal.aborted) return; if (!emitted) firstResponseMs = Date.now() - started; emitted = true; input.onDelta?.(delta);
@@ -51,10 +53,13 @@ export async function runProviders(input: AIInput, providers: AIProvider[], poli
         return { text: text.trim(), metadata: { provider: provider.id, model: provider.model, fallback: index > 0, attempts, firstResponseMs: emitted ? firstResponseMs : Date.now() - started, totalMs: Date.now() - started } };
       } catch (error) {
         const safe = error instanceof AIError ? error : new AIError("network", "The AI provider connection failed. Please retry.", true, 503); lastError = safe;
-        if (["safety", "cancelled", "input"].includes(safe.code)) throw safe;
-        // Visible partial answers are never combined with another attempt/provider.
-        if (emitted) throw new AIError(safe.code, "The response stopped before completion. Partial output is not saved as a complete answer. Retry starts a new answer.", safe.retryable, safe.status);
-        if (!safe.retryable) break;
+        if (["safety", "domain", "cancelled", "input"].includes(safe.code)) throw safe;
+        // Reset visible output before a retry; clients without reset support fail safely.
+        if (emitted) {
+          if (!input.onReset) throw new AIError(safe.code, "The response stopped before completion. Partial output is not saved as a complete answer. Retry starts a new answer.", safe.retryable, safe.status);
+          input.onReset();
+        }
+        if (!safe.retryable) { cooldown.set(circuitKey, Date.now() + policy.cooldownMs); break; }
         if (retry === Math.min(policy.retries, 1)) { cooldown.set(circuitKey, Date.now() + Math.max(policy.cooldownMs, safe.retryAfterMs || 0)); break; }
         const delay = safe.retryAfterMs ?? 250;
         if (delay > Math.min(policy.attemptTimeoutMs, deadline - Date.now() - 1)) { cooldown.set(circuitKey, Date.now() + delay); break; }

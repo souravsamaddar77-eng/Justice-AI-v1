@@ -2,8 +2,6 @@
 import { performance } from 'node:perf_hooks';
 import { writeFile } from 'node:fs/promises';
 const origin = process.env.TEST_ORIGIN || 'http://localhost:3000';
-const config = await (await fetch(`${origin}/api/ai/config`)).json();
-const consent = { providers: config.providers.map(p => p.id) };
 const cases = [
   { name: 'chat-json', path: '/api/chat', body: { message: 'Explain what a document title is in one sentence.', history: [], persona: 'citizen' } },
   { name: 'chat-stream', path: '/api/chat', body: { message: 'Explain what a document title is in one sentence.', history: [], persona: 'citizen', stream: true } },
@@ -14,7 +12,7 @@ for (const item of cases) {
   // Warm route compilation using invalid input without contacting a provider.
   await fetch(`${origin}${item.path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
   const started = performance.now();
-  const response = await fetch(`${origin}${item.path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...item.body, mode: 'live', consent }), signal: AbortSignal.timeout(100000) });
+  const response = await fetch(`${origin}${item.path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...item.body, language: 'en' }), signal: AbortSignal.timeout(100000) });
   const headersMs = Math.round(performance.now() - started);
   let firstContentMs = null, data = null, error = null, buffer = '';
   if (response.headers.get('content-type')?.includes('text/event-stream')) {

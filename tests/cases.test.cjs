@@ -77,6 +77,7 @@ beforeEach(() => {
   process.env.CLERK_SECRET_KEY = 'sk_test_synthetic';
   delete process.env.NEXT_PUBLIC_SUPABASE_URL;
   delete process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   delete process.env.SUPABASE_SECRET_KEY;
   process.env.SUPABASE_URL = 'https://synthetic.supabase.test';
   process.env.SUPABASE_ANON_KEY = 'synthetic-anon';
@@ -102,6 +103,10 @@ beforeEach(() => {
     }
     if (url.pathname === '/auth/v1/token') return Response.json(sessionFor(ids.owner));
     if (url.pathname === '/auth/v1/logout') return new Response(null, { status: 204 });
+    if (url.pathname === '/storage/v1/object/justice-case-documents' && init.method === 'DELETE') {
+      for (const name of JSON.parse(init.body).prefixes) storageFiles.delete(name);
+      return Response.json([]);
+    }
     if (url.pathname.startsWith('/storage/v1/object/justice-case-documents/')) {
       const name = decodeURIComponent(url.pathname.split('/justice-case-documents/')[1]);
       if (init.method === 'POST') { storageFiles.set(name, Buffer.from(init.body)); return Response.json({ key: name }); }
@@ -431,4 +436,56 @@ test('modern server secret stays in the apikey header and out of Bearer', async 
   };
   await server.db('justice_cases');
   await server.storage(`${ids.case}/file`);
+});
+
+test('server storage works with a project URL and server secret without an anon key', async () => {
+  delete process.env.SUPABASE_ANON_KEY;
+  process.env.NEXT_PUBLIC_SUPABASE_URL = process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_URL;
+  assert.equal(server.configured(), true);
+  assert.equal((await server.currentUser()).id, ids.owner);
+  await server.storage(`${ids.case}/file`);
+});
+
+test('a public key cannot be used as the elevated Storage credential', async () => {
+  process.env.SUPABASE_SECRET_KEY = 'sb_publishable_not_a_server_secret';
+  assert.equal(server.configured(), false);
+  await assert.rejects(server.storage(`${ids.case}/file`), e => e.status === 503);
+  assert.equal(requests.length, 0);
+});
+
+function uploadRequest() {
+  const form = new FormData();
+  form.set('file', new File(['Synthetic private upload'], 'notice.txt', { type: 'text/plain' }));
+  return new Request('https://justice.test/api/cases/' + ids.case + '/documents', { method: 'POST', body: form });
+}
+test('authenticated upload saves immutable bytes and their database fingerprint', async () => {
+  const response = await routes.documents.POST(uploadRequest(), { params: Promise.resolve({ id: ids.case }) });
+  assert.equal(response.status, 201);
+  const { item } = await response.json();
+  assert.equal(item.metadata.storage_path, undefined);
+  const saved = tables.justice_case_items.find(row => row.id === item.id);
+  assert.equal(saved.created_by, ids.owner);
+  assert.equal(validation.fingerprint(storageFiles.get(saved.metadata.storage_path)), saved.metadata.sha256);
+});
+
+test('failed upload metadata insert removes the original using the Storage prefixes API', async () => {
+  const transport = global.fetch;
+  global.fetch = async (input, init = {}) => {
+    if (String(input).includes('/rest/v1/justice_case_items?') && init.method === 'POST') return Response.json({ code: 'XX000' }, { status: 503 });
+    return transport(input, init);
+  };
+  const response = await routes.documents.POST(uploadRequest(), { params: Promise.resolve({ id: ids.case }) });
+  assert.equal(response.status, 503);
+  assert.equal(storageFiles.size, 1);
+  const cleanup = requests.find(request => request.method === 'DELETE');
+  assert.equal(cleanup.url.pathname, '/storage/v1/object/justice-case-documents');
+  assert.equal(JSON.parse(cleanup.body).prefixes.length, 1);
+});
+
+test('missing bucket and denied Storage credentials produce actionable distinct errors', async () => {
+  global.fetch = async () => Response.json({ code: 'NoSuchBucket', message: 'Bucket not found' }, { status: 404 });
+  await assert.rejects(server.storage(`${ids.case}/file`), e => e.code === 'STORAGE_BUCKET_MISSING');
+  global.fetch = async () => Response.json({ message: 'private upstream details' }, { status: 403 });
+  await assert.rejects(server.storage(`${ids.case}/file`), e => e.code === 'STORAGE_ACCESS_DENIED' && !e.message.includes('upstream'));
 });

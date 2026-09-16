@@ -1,0 +1,50 @@
+.page { max-width: 1320px; margin: auto; padding: 32px; color: var(--ink); }
+.input, .results { border: 1px solid var(--line); border-radius: 16px; background: var(--surface-raised); padding: 24px; margin-top: 24px; }
+.inputHeading, .actions, .fileName { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.inputHeading { margin-bottom: 18px; }
+.page h2 { font-size: 20px; font-weight: 650; }
+.page h3 { font-size: 17px; font-weight: 650; }
+.fileLabel, .textLabel, .filters label { display: flex; flex-direction: column; gap: 8px; font-size: 14px; font-weight: 600; }
+.fileLabel input { max-width: 100%; font-weight: 400; }
+.textLabel { margin: 20px 0; }
+.page textarea, .filters input, .filters select { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); padding: 12px; font-size: 14px; font-weight: 400; }
+.page textarea { resize: vertical; min-height: 150px; line-height: 1.65; }
+.page button:focus-visible, .page input:focus-visible, .page select:focus-visible, .page textarea:focus-visible { outline: 3px solid #bc913c; outline-offset: 3px; }
+.page button:disabled { opacity: .55; cursor: not-allowed; }
+.muted { color: var(--muted); font-size: 13px; line-height: 1.6; font-weight: 400; margin-top: 8px; }
+.fileName { margin-top: 16px; overflow-wrap: anywhere; }
+.fileName button { padding: 8px; }
+.actions { margin-top: 16px; }
+.error { border-inline-start: 4px solid #c3534a; background: var(--surface-raised); color: var(--ink); padding: 16px; margin-top: 20px; white-space: pre-wrap; }
+.summary { display: flex; align-items: start; gap: 24px; justify-content: space-between; }
+.summary > div:first-child { max-width: 75ch; }
+.summary p { margin-top: 12px; line-height: 1.7; }
+.summary .actions { flex-shrink: 0; flex-direction: column; align-items: stretch; margin: 0; }
+.filters { display: flex; gap: 16px; margin: 24px 0; }
+.filters label:last-child { flex: 1; }
+.workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); border-top: 1px solid var(--line); }
+.document { padding: 24px 24px 0 0; min-width: 0; }
+.document pre { font: 14px/1.95 Georgia, 'Nirmala UI', serif; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 75vh; overflow-y: auto; margin-top: 18px; padding: 8px; }
+.document mark { background: #f0d28c; color: #263149; border-radius: 3px; scroll-margin: 50px; }
+.findings { border-inline-start: 1px solid var(--line); padding: 8px 0 0 24px; min-width: 0; }
+.finding { padding: 20px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.finding.selected { border-inline-start: 3px solid #bc913c; padding-inline-start: 14px; }
+.findingTitle { display: block; width: 100%; text-align: start; }
+.findingTitle h3 { margin-top: 8px; }
+.finding > p { font-size: 14px; line-height: 1.7; margin-top: 12px; }
+.severity { display: inline-block; font-size: 12px; font-weight: 650; border: 1px solid currentColor; border-radius: 5px; padding: 3px 8px; }
+.severity[data-level=high] { color: #b64036; }
+.severity[data-level=medium] { color: #876000; }
+.severity[data-level=low] { color: #3569a0; }
+:global([data-theme=dark]) .severity[data-level=high] { color: #ffb6b0; }
+:global([data-theme=dark]) .severity[data-level=medium] { color: #efcb7c; }
+:global([data-theme=dark]) .severity[data-level=low] { color: #a7c6f0; }
+.redline { margin-top: 16px; font-size: 14px; line-height: 1.75; white-space: pre-wrap; }
+.editLabel { display: block; font-size: 12px; font-weight: 600; margin: 12px 0 5px; color: var(--muted); }
+.redline del, .redline ins { display: block; border-inline-start: 3px solid; padding: 10px 12px; }
+.redline del { background: #b33c3210; border-color: #bd625a; text-decoration-thickness: 1px; }
+.redline ins { background: #29946a12; border-color: #429a78; text-decoration: none; }
+.empty { padding: 28px 4px; line-height: 1.75; }
+.empty h3 { margin: 12px 0; }
+@media(max-width:1000px) { .summary { flex-direction: column; } .summary .actions { flex-direction: row; } }
+@media(max-width:760px) { .page { padding: 20px 14px; } .input, .results { padding: 18px; } .workspace { grid-template-columns: 1fr; } .document { padding: 20px 0; } .document pre { max-height: 320px; } .findings { border-inline-start: 0; border-top: 1px solid var(--line); padding: 0; } .filters { flex-direction: column; } }

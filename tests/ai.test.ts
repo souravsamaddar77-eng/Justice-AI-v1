@@ -5,7 +5,7 @@ import { parseAnalysis } from "../lib/analysis-schema";
 import { readAIResponse } from "../lib/ai-client";
 const input: AIInput = { system: "Use synthetic information only.", messages: [{ role: "user", content: "Explain a sample legal notice." }] };
 const policy = { attemptTimeoutMs: 100, deadlineMs: 400, retries: 0, cooldownMs: 1000 };
-const provider = (id: "gemini" | "nemotron", generate: AIProvider["generate"]): AIProvider => ({ id, model: "synthetic-test-model", capabilities: ["text", "stream"], generate });
+const provider = (id: "gemini" | "groq" | "nemotron", generate: AIProvider["generate"]): AIProvider => ({ id, model: "synthetic-test-model", capabilities: ["text", "stream"], generate });
 beforeEach(resetProviderCooldowns);
 test("actual secondary adapter runs after primary outage", async () => {
   const calls: string[] = [];
@@ -79,4 +79,40 @@ test("client stream needs final result and preserves received partial output", a
 test("client stream handles split chunks and complete result", async () => {
   const encode = new TextEncoder(); const stream = new ReadableStream({ start(c) { c.enqueue(encode.encode('event: del')); c.enqueue(encode.encode('ta\ndata: {"text":"Hello"}\n\nevent: result\ndata: {"reply":"Hello","source":"gemini"}\n\n')); c.close(); } });
   const result = await readAIResponse<{reply:string}>(new Response(stream, { headers: { "Content-Type": "text/event-stream" } }), () => {}, () => {}); assert.equal(result.reply, "Hello");
+});
+test("partial failure resets the answer before Groq replacement", async () => {
+  const events: string[] = []; let displayed = "";
+  const result = await runProviders({ ...input, onDelta: text => { displayed += text; events.push(text); }, onReset: () => { displayed = ""; events.push("reset"); } }, [
+    provider("gemini", async (_, __, delta) => { delta?.("Failed partial"); throw new Error("disconnected"); }),
+    provider("groq", async (_, __, delta) => { delta?.("Complete replacement"); return "Complete replacement"; }),
+  ], policy);
+  assert.deepEqual(events, ["Failed partial", "reset", "Complete replacement"]);
+  assert.equal(displayed, result.text); assert.equal(result.metadata.provider, "groq");
+});
+test("timeout falls through to Groq while late aborted tokens are ignored", async () => {
+  let displayed = "";
+  const result = await runProviders({ ...input, onDelta: text => { displayed += text; }, onReset: () => { displayed = ""; } }, [
+    provider("gemini", async (_, __, delta) => { await new Promise(resolve => setTimeout(resolve, 30)); delta?.("Late failed answer"); return "Late failed answer"; }),
+    provider("groq", async (_, __, delta) => { delta?.("Replacement"); return "Replacement"; }),
+  ], { ...policy, attemptTimeoutMs: 10 });
+  await new Promise(resolve => setTimeout(resolve, 35));
+  assert.equal(displayed, "Replacement"); assert.equal(result.metadata.provider, "groq");
+});
+test("client reset clears a failed partial before replacement and cannot be ignored", async () => {
+  const events = 'event: delta\ndata: {"text":"Partial"}\n\nevent: reset\ndata: {}\n\nevent: delta\ndata: {"text":"Complete"}\n\nevent: result\ndata: {"reply":"Complete"}\n\n';
+  let displayed = "";
+  const response = () => new Response(events, { headers: { "Content-Type": "text/event-stream" } });
+  const result = await readAIResponse<{reply:string}>(response(), text => { displayed += text; }, () => {}, () => { displayed = ""; });
+  assert.equal(displayed, result.reply);
+  await assert.rejects(readAIResponse(response(), () => {}, () => {}), /restarted/);
+});
+test("partial safety refusal and cancellation never switch providers", async () => {
+  for (const code of ["safety", "cancelled"]) {
+    let called = false;
+    await assert.rejects(runProviders({ ...input, onDelta() {}, onReset() {} }, [
+      provider("gemini", async (_, __, delta) => { delta?.("Partial"); throw new AIError(code, code, false); }),
+      provider("groq", async () => { called = true; return "Never"; }),
+    ], policy), new RegExp(code));
+    assert.equal(called, false);
+  }
 });

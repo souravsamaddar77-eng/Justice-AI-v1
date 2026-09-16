@@ -9,7 +9,7 @@ export const TOOLS = [
   { title: "IPC to BNS converter", description: "Search the section mapping reference.", href: "/advocate?tool=converter", group: "For your practice", icon: ArrowLeftRight },
   { title: "Precedents & judgments", description: "Browse research and Indian Kanoon links.", href: "/advocate/precedents", group: "For your practice", icon: BookOpen },
   { title: "Case intake", description: "Explore the case brief demonstration.", href: "/advocate/cases", group: "For your practice", icon: BriefcaseBusiness },
-  { title: "Draft review demo", description: "Explore simulated document review.", href: "/advocate/draft-review", group: "For your practice", icon: ClipboardCheck },
+  { title: "Draft review", description: "Review legal drafts and compare proposed edits.", href: "/advocate/draft-review", group: "For your practice", icon: ClipboardCheck },
   { title: "Advocate network", description: "Browse the demonstration network.", href: "/advocate/network", group: "For your practice", icon: MessageSquare },
   { title: "Lok Adalat", description: "Find sittings and mediation information.", href: "/advocate?tool=lok-adalat", group: "For your practice", icon: Gavel },
   { title: "My cases", description: "Keep documents, tasks and reviewed work together.", href: "/cases", group: "Your workspace", icon: FolderOpen },

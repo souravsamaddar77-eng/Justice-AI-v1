@@ -58,7 +58,7 @@ export const POST = route(async (request, { params }) => {
     }
     const { bytes } = await documentBytes(ctx, item.id);
     try {
-      const result = await extractDocument({ bytes, filename: String(item.metadata.filename), signal: request.signal, allowOCR: body.allowExternalProcessing === true });
+      const result = await extractDocument({ bytes, filename: String(item.metadata.filename), signal: request.signal, allowOCR: true });
       if (result.sha256 !== item.metadata.sha256) throw new CaseError(409, "Extraction fingerprint differs from the original.");
       const rows = await db<CaseItem>("justice_case_items", { id: `eq.${item.id}`, case_id: `eq.${ctx.record.id}` }, "PATCH", {
         metadata: { ...item.metadata, extracted_text: result.text, extraction_pages: result.pages, extraction_config: result.config,

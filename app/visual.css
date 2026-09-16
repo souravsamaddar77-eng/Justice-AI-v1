@@ -1,0 +1,231 @@
+/* Visual layer only: retain all existing dimensions, grids and DOM structure. */
+:root {
+  --glass-bg: rgba(255, 255, 255, .67);
+  --glass-strong: rgba(250, 253, 255, .97);
+  --glass-edge: rgba(255, 255, 255, .88);
+  --glass-line: rgba(92, 123, 158, .23);
+  --glass-shadow: 0 12px 34px -20px rgba(28, 51, 83, .32), inset 0 1px 0 rgba(255, 255, 255, .9);
+  --glass-inset: rgba(248, 252, 255, .62);
+  --glass-hover: rgba(244, 250, 255, .9);
+  --glass-focus: #387689;
+  --glass-glow: rgba(51, 142, 164, .18);
+  --glass-gold: #a47725;
+  --mesh-blue: rgba(110, 154, 219, .18);
+  --mesh-teal: rgba(77, 161, 160, .14);
+  --mesh-gold: rgba(223, 191, 119, .17);
+  --motion-ease: cubic-bezier(.22, 1, .36, 1);
+}
+
+:root[data-theme="dark"] {
+  --canvas: #0b1425;
+  --glass-bg: rgba(24, 40, 63, .65);
+  --glass-strong: rgba(17, 31, 50, .94);
+  --glass-edge: rgba(216, 235, 255, .16);
+  --glass-line: rgba(179, 205, 236, .19);
+  --glass-shadow: 0 18px 44px -24px rgba(0, 7, 19, .75), inset 0 1px 0 rgba(223, 239, 255, .08);
+  --glass-inset: rgba(8, 22, 39, .48);
+  --glass-hover: rgba(45, 69, 95, .66);
+  --glass-focus: #8dcbd9;
+  --glass-glow: rgba(107, 187, 213, .17);
+  --glass-gold: #e1ba70;
+  --mesh-blue: rgba(51, 98, 177, .23);
+  --mesh-teal: rgba(28, 134, 138, .17);
+  --mesh-gold: rgba(168, 125, 60, .10);
+}
+
+body {
+  background-color: var(--canvas);
+  background-image:
+    radial-gradient(ellipse at 12% 8%, var(--mesh-blue), transparent 52%),
+    radial-gradient(ellipse at 93% 36%, var(--mesh-teal), transparent 50%),
+    radial-gradient(ellipse at 46% 100%, var(--mesh-gold), transparent 55%);
+  background-attachment: fixed;
+  text-rendering: optimizeLegibility;
+}
+
+/* The default is opaque for browsers without backdrop-filter support. */
+:root :is(.glass-card, .card, .card-surface, .card-surface-dark, .quick-tool,
+  .case-intro, .tool-directory > a, .tools-filter, .case-panel, .save-case-panel) {
+  background: var(--surface);
+  border-color: var(--glass-line);
+  box-shadow: var(--glass-shadow);
+}
+:root :is(.desktop-sidebar, .mobile-drawer, .app-topbar, .preferences-popover,
+  .tool-finder, .glass-chat, .justice-chat-panel, .justice-chat--full) {
+  background: var(--surface);
+  border-color: var(--glass-line);
+  box-shadow: var(--glass-shadow);
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-theme] :is(.glass-card, .card, .card-surface, .card-surface-dark, .quick-tool,
+    .case-intro, .tool-directory > a, .tools-filter, .case-panel, .save-case-panel) {
+    background: linear-gradient(135deg, var(--glass-edge), transparent 48%), var(--glass-bg);
+    border-color: var(--glass-line);
+    -webkit-backdrop-filter: blur(18px) saturate(125%);
+    backdrop-filter: blur(18px) saturate(125%);
+  }
+  :root[data-theme] body :is(.desktop-sidebar, .mobile-drawer, .app-topbar,
+    .preferences-popover, .tool-finder, .glass-chat, .justice-chat-panel, .justice-chat--full) {
+    background: linear-gradient(135deg, var(--glass-edge), transparent 42%), var(--glass-strong);
+    -webkit-backdrop-filter: blur(24px) saturate(135%);
+    backdrop-filter: blur(24px) saturate(135%);
+    border-color: var(--glass-line);
+  }
+  :root[data-theme] .start-panel {
+    background: radial-gradient(ellipse at 90% 0%, var(--mesh-teal), transparent 70%),
+      linear-gradient(130deg, var(--glass-edge), transparent), var(--glass-bg);
+    border-color: var(--glass-line);
+    box-shadow: var(--glass-shadow);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+  }
+}
+
+/* Crisp existing type scale; no font-size or line-height changes. */
+.home-intro h1, .page-heading h1, [data-page-header] h1 {
+  text-shadow: 0 2px 28px var(--glass-glow);
+  font-kerning: normal;
+}
+.brand { text-shadow: 0 0 24px rgba(204, 166, 95, .12); }
+:root[data-theme] .brand b { color: var(--glass-gold); }
+:root[data-theme] :is(.tool-icon, .case-illustration) {
+  background: linear-gradient(145deg, var(--glass-edge), var(--glass-inset));
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+}
+:root[data-theme] :is(.btn-primary, .start-copy .btn-primary, .account-sign-up) {
+  background: linear-gradient(125deg, var(--primary-bg), color-mix(in srgb, var(--primary-bg), #6899ba 14%));
+  color: var(--primary-fg);
+  box-shadow: 0 5px 18px -8px rgba(13, 39, 73, .5), inset 0 1px 0 rgba(255, 255, 255, .13);
+}
+:root[data-theme] :is(.btn-secondary, .btn-ghost, .preferences-menu > summary,
+  .theme-selector button[aria-pressed="true"], .case-small-button) {
+  background: var(--glass-bg);
+  border-color: var(--glass-line);
+  box-shadow: inset 0 1px 0 var(--glass-edge);
+}
+:root[data-theme] .side-link.active {
+  background: linear-gradient(115deg, var(--primary-bg), color-mix(in srgb, var(--primary-bg), #789bbb 15%));
+  box-shadow: 0 6px 20px -12px rgba(17, 34, 59, .6), inset 2px 0 0 var(--glass-gold);
+}
+
+/* These selectors keep controls in their original boxes. */
+:root[data-theme] :is(.glass-input, .input, .input-field,
+  .app-content textarea, .app-content input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]),
+  .app-content select, .language-selector select, .justice-chat-compose textarea, .justice-chat-toolbar select) {
+  background: var(--glass-inset);
+  color: var(--ink);
+  border-color: var(--glass-line);
+  border-radius: 12px;
+  box-shadow: inset 0 2px 6px rgba(17, 35, 59, .035), inset 0 1px 0 var(--glass-edge);
+  transition: border-color 220ms ease, box-shadow 220ms ease, background-color 220ms ease,
+    translate 220ms var(--motion-ease), scale 220ms var(--motion-ease);
+}
+:root[data-theme] :is(.glass-input, .input, .input-field, .app-content textarea,
+  .app-content input, .app-content select, .language-selector select,
+  .justice-chat-compose textarea, .justice-chat-toolbar select):focus-visible {
+  outline: 2px solid var(--glass-focus);
+  outline-offset: 2px;
+  border-color: var(--glass-focus);
+  box-shadow: 0 0 0 5px var(--glass-glow), inset 0 1px 0 var(--glass-edge);
+}
+:root[data-theme] :is(input, textarea)::placeholder { color: var(--muted); opacity: .85; }
+:root[data-theme] select option { background: var(--surface); color: var(--ink); }
+
+/* Shared chat: the outer panel does the blur, avoiding nested blur per message. */
+:root[data-theme] .justice-chat {
+  --chat-paper: var(--glass-bg);
+  --chat-canvas: var(--glass-inset);
+  --chat-ink: var(--ink);
+  --chat-muted: var(--muted);
+  --chat-line: var(--glass-line);
+  --chat-accent: var(--glass-gold);
+}
+:root[data-theme] .justice-chat--compact { background: transparent; }
+:root[data-theme] .justice-chat-panel > header {
+  background: linear-gradient(120deg, rgba(15, 33, 54, .96), rgba(28, 58, 75, .96));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
+}
+:root[data-theme] .justice-chat-message--assistant {
+  background: var(--glass-bg);
+  box-shadow: inset 0 1px 0 var(--glass-edge), 0 4px 12px -9px rgba(0, 15, 35, .35);
+}
+:root[data-theme] .justice-chat-message--user {
+  background: linear-gradient(135deg, #234765, #1b384f);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15);
+}
+:root[data-theme] .justice-chat-compose textarea { border-radius: 18px; }
+:root[data-theme] .justice-chat-chips button { background: var(--glass-bg); border-radius: 16px; }
+:root[data-theme] .justice-chat-send { background: linear-gradient(120deg, #eccb8b, #dcb062); box-shadow: inset 0 1px 0 #fff7ddaa; }
+:root[data-theme] .justice-chat-launcher {
+  background: linear-gradient(135deg, rgba(33, 56, 79, .88), rgba(11, 31, 49, .94));
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  border-color: rgba(235, 203, 140, .5);
+  box-shadow: 0 8px 28px rgba(9, 26, 45, .24), inset 0 1px 0 rgba(255, 238, 199, .2);
+}
+
+/* Translate/scale affect paint only. Never transition dimensions or use all. */
+:is(.btn-primary, .btn-secondary, .btn-ghost, .account-sign-up, .icon-button,
+  .side-link, .quick-tool, .tool-directory > a, .preferences-menu > summary,
+  .theme-selector button, .justice-chat-icon, .justice-chat-send,
+  .justice-chat-chips button, .justice-chat-launcher, .case-small-button) {
+  transition: translate 220ms var(--motion-ease), scale 220ms var(--motion-ease),
+    background-color 220ms ease, border-color 220ms ease, box-shadow 220ms ease, color 220ms ease;
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  :is(.btn-primary, .btn-secondary, .btn-ghost, .account-sign-up, .icon-button,
+    .preferences-menu > summary, .theme-selector button, .language-selector select, .justice-chat-icon,
+    .justice-chat-send, .justice-chat-chips button, .case-small-button):not(:disabled):hover {
+    translate: 0 -2px;
+    scale: 1.025;
+  }
+  :is(.quick-tool, .tool-directory > a):hover { translate: 0 -3px; box-shadow: 0 18px 32px -22px var(--glass-focus), inset 0 1px 0 var(--glass-edge); }
+  .side-link:hover { translate: 2px 0; }
+  .justice-chat-launcher:hover { translate: 0 -3px; scale: 1.05; }
+}
+:root[data-theme] :is(.btn-secondary, .btn-ghost, .theme-selector button,
+  .side-link:not(.active), .justice-chat-chips button, .case-small-button):not(:disabled):hover {
+  background-color: var(--glass-hover);
+  border-color: var(--glass-focus);
+}
+@media (prefers-reduced-motion: no-preference) {
+  :is(.btn-primary, .btn-secondary, .btn-ghost, .account-sign-up, .icon-button,
+    .preferences-menu > summary, .theme-selector button, .justice-chat-icon,
+    .justice-chat-send, .justice-chat-launcher, .justice-chat-chips button):not(:disabled):active {
+    translate: 0 0;
+    scale: .97;
+    transition-duration: 90ms;
+  }
+}
+
+/* Existing route roots remount on navigation; no wrapper or router changes. */
+@keyframes justice-page-enter {
+  from { opacity: .25; translate: 0 7px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes justice-item-enter {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .app-content > :not(script):not(style) { animation: justice-page-enter 380ms var(--motion-ease); }
+  .motion-item { animation: justice-item-enter 340ms var(--motion-ease) backwards; animation-delay: calc(var(--motion-index, 0) * 45ms); }
+  .justice-chat-panel:not([hidden]), .preferences-menu[open] .preferences-popover {
+    animation: justice-page-enter 230ms var(--motion-ease);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .motion-item, .app-content > *, .justice-chat-panel, .preferences-popover { animation: none !important; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-theme] { --glass-bg: var(--surface); --glass-strong: var(--surface); --glass-inset: var(--surface-raised); --glass-edge: transparent; }
+  body { background-image: none; }
+}
+@media (forced-colors: active) {
+  body { background-image: none; }
+  :is(.glass-card, .card-surface, .justice-chat-panel, .justice-chat--full, .desktop-sidebar, .app-topbar) {
+    background: Canvas !important; box-shadow: none !important; backdrop-filter: none !important;
+  }
+}

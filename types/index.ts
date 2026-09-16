@@ -3,14 +3,14 @@
 // ─────────────────────────────────────────────────────────────
 
 /** Tag identifying which backend produced a response. */
-export type Source = "gemini" | "nemotron" | "mock";
+export type Source = "gemini" | "groq" | "nemotron" | "mock";
+export type ResponseLanguage = "en" | "hi" | "bn" | "ta" | "te" | "mr" | "gu" | "kn" | "ml" | "pa";
 export interface AIRequestOptions {
-  mode?: "live" | "demo";
-  consent?: { providers: ("gemini" | "nemotron")[]; ocr?: boolean };
+  language?: ResponseLanguage;
   stream?: boolean;
 }
 export interface AIMetadata {
-  provider: "gemini" | "nemotron"; model: string; fallback: boolean; attempts: number;
+  provider: "gemini" | "groq" | "nemotron"; model: string; fallback: boolean; attempts: number;
   firstResponseMs: number; totalMs: number;
 }
 
@@ -84,9 +84,9 @@ export interface ChatResponseBody {
 export type Urgency = "High" | "Medium" | "Low";
 
 export interface AnalyzeRequestBody extends AIRequestOptions {
-  /** Text extracted from the uploaded notice. May be empty for a UI-only demo. */
+  /** Text extracted from the uploaded notice. May be empty when fileBase64 is supplied. */
   text: string;
-  /** Original filename, used as a fallback signal for mock mode. */
+  /** Original filename used to validate and extract an uploaded file. */
   filename?: string;
   fileBase64?: string;
   redact?: boolean;
@@ -108,7 +108,7 @@ export interface AnalyzeResponseBody {
   source: Source;
 }
 
-/* ─────────── Drafting co-pilot (Nemotron) ─────────── */
+/* ─────────── Drafting co-pilot ─────────── */
 
 export type DocumentType =
   | "bail_application"

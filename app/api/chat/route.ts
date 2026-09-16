@@ -1,6 +1,5 @@
-import { AIError, aiErrorResponse, generateAI, requireAIConsent } from "@/lib/ai";
+import { AIError, aiErrorResponse, generateAI, languageInstruction } from "@/lib/ai";
 import { aiStreamResponse } from "@/lib/ai-stream";
-import { mockChatReply } from "@/lib/mock-data";
 import type { ChatRequestBody, ChatMessage } from "@/types";
 export const runtime = "nodejs";
 const PERSONA = {
@@ -14,12 +13,11 @@ export async function POST(req: Request) {
     if (!body || typeof body.message !== "string" || !body.message.trim() || body.message.length > 8000) throw new AIError("input", "Enter a message of up to 8,000 characters.", false, 400);
     if (body.history && (!Array.isArray(body.history) || body.history.length > 100 || body.history.some(h => !h || !["user", "assistant"].includes(h.role) || typeof h.content !== "string" || h.content.length > 16000))) throw new AIError("input", "Conversation history is invalid or too long.", false, 400);
     const persona = body.persona === "advocate" ? "advocate" : "citizen";
-    if (body.mode === "demo") return Response.json({ reply: mockChatReply(body.message, persona), source: "mock" }, { headers: { "Cache-Control": "no-store" } });
-    requireAIConsent(body);
+    const language = languageInstruction(body.language);
     // Retain recent complete turns under a fixed text budget; never fetch case data implicitly.
     const history: ChatMessage[] = []; let length = body.message.length;
     for (const item of (body.history || []).slice(-12).reverse()) { if (length + item.content.length > 22000) break; history.unshift(item); length += item.content.length; }
-    const input = { primary: "gemini" as const, system: PERSONA[persona], messages: [...history, { role: "user" as const, content: body.message.trim() }], signal: req.signal, maxTokens: 1024 };
+    const input = { primary: "gemini" as const, system: `${PERSONA[persona]} ${language}`, messages: [...history, { role: "user" as const, content: body.message.trim() }], signal: req.signal, maxTokens: 2048 };
     if (body.stream) return aiStreamResponse(input, (reply, source, metadata) => ({ reply, source, metadata }));
     const generated = await generateAI(input);
     return Response.json({ reply: generated.text, source: generated.metadata.provider, metadata: generated.metadata }, { headers: { "Cache-Control": "no-store" } });

@@ -11,7 +11,7 @@ export function aiStreamResponse(input: AIInput & { primary: ProviderId }, resul
       const send = (type: string, data: unknown) => { if (!controller.signal.aborted) output.enqueue(encoder.encode(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`)); };
       try {
         send("stage", { message: "Preparing your request…" });
-        const generated = await generateAI({ ...input, signal: controller.signal, onDelta: text => send("delta", { text }), onStage: message => send("stage", { message }) });
+        const generated = await generateAI({ ...input, signal: controller.signal, onDelta: text => send("delta", { text }), onStage: message => send("stage", { message }), onReset: () => send("reset", {}) });
         send("result", result(generated.text, generated.metadata.provider, generated.metadata));
       } catch (error) {
         const safe = error instanceof AIError ? error : new AIError("unavailable", "The AI request failed. Retry using your retained input.", true);

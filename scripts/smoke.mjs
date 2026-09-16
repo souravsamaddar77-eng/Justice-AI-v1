@@ -13,7 +13,9 @@ const session = await fetch(base+'/api/auth/session').then(r=>r.json());
 console.log(`Cases: ${session.configured ? 'configured; authenticate to verify saved data' : 'setup required; standalone routes stay available'}`);
 const config = await fetch(base+'/api/ai/config').then(r=>r.json());
 console.log(`AI config returns processor disclosure: ${Array.isArray(config.providers)}`);
-const denied = await fetch(base+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'Synthetic test without consent'})});
-console.log(`${denied.status === 428 ? 'PASS' : 'FAIL'} live AI requires consent (${denied.status})`);
-if(denied.status!==428)failed=true;
+console.log(`Groq fallback: ${config.fallbackConfigured ? 'configured' : 'GROQ_API_KEY required (or fallback disabled)'}`);
+// Invalid input checks the route without issuing a billable provider request.
+const invalid = await fetch(base+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'Synthetic test',language:'unsupported-language'})});
+console.log(`${invalid.status === 400 ? 'PASS' : 'FAIL'} unsupported response language rejected (${invalid.status})`);
+if(invalid.status!==400)failed=true;
 process.exitCode = failed ? 1 : 0;

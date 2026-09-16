@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Wand2, Loader2, Copy, Check, FileText, Download } from "lucide-react";
-import AIConsent, { useAIConsent } from "./AIConsent";
+import { usePreferences } from "./PreferencesProvider";
+import { toPlainText } from "@/lib/plain-text";
+import { openDraftPrintView } from "@/lib/draft-print";
 import SaveToCase from "./SaveToCase";
 import { readAIResponse } from "@/lib/ai-client";
 import type { DocumentType, DraftResponseBody } from "@/types";
@@ -30,12 +32,13 @@ export default function DraftingCopilot() {
   const [partial, setPartial] = useState("");
   const [stage, setStage] = useState("");
   const request = useRef<AbortController | null>(null);
-  const ai = useAIConsent();
+  const { language, t } = usePreferences();
+  const [resultLanguage, setResultLanguage] = useState(language);
   useEffect(() => () => request.current?.abort(), []);
 
   async function generate(e: React.FormEvent) {
     e.preventDefault();
-    if (request.current || !ai.ready) return;
+    if (request.current) return;
     setBusy(true);
     setError("");
 
@@ -65,10 +68,11 @@ export default function DraftingCopilot() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
-        body: JSON.stringify({ clientName, issue, date, documentType, additionalNotes, ...ai.requestOptions, stream: true }),
+        body: JSON.stringify({ clientName, issue, date, documentType, additionalNotes, language, stream: true }),
       });
-      const data = await readAIResponse<DraftResponseBody>(res, delta => setPartial(prev => prev + delta), setStage);
-      setResult(data);
+      const data = await readAIResponse<DraftResponseBody>(res, delta => setPartial(prev => prev + delta), setStage, () => setPartial(""));
+      setResult({ ...data, title: toPlainText(data.title), document: toPlainText(data.document) });
+      setResultLanguage(language);
       setPartial("");
     } catch (error) {
       setError(controller.signal.aborted ? "Cancelled. Your form, previous draft and partial output are retained." : error instanceof Error ? error.message : "Could not generate the draft. Your input is retained.");
@@ -92,38 +96,11 @@ export default function DraftingCopilot() {
     }
   }
 
-  /** Generate a PDF from the drafted document text. */
-  async function downloadPdf() {
+  /** Use native Indic shaping when the browser prints or saves the draft as PDF. */
+  function downloadPdf() {
     if (!result) return;
-    const { jsPDF } = await import("jspdf");
-    const doc = new jsPDF();
-    const lines = doc.splitTextToSize(result.document, 180);
-    let y = 20;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text(result.title, 10, y);
-    y += 10;
-    doc.setFontSize(8);
-    doc.text(result.source === "mock" ? "DEMO SAMPLE — SIMULATED / NOT REVIEWED" : "UNREVIEWED AI DRAFT — Requires advocate review", 10, y);
-    y += 8;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    for (const line of lines) {
-      if (y > 280) {
-        doc.addPage();
-        y = 20;
-      }
-      doc.text(line, 10, y);
-      y += 5;
-    }
-
-    // Sanitize filename: remove/replace invalid characters
-    const safeTitle = result.title
-      .replace(/[\\/:*?"<>|]/g, '_')    // Replace invalid Windows chars
-      .replace(/\s+/g, ' ')             // Collapse multiple spaces
-      .trim();
-
-    doc.save(`${safeTitle.replace(/\s+/g, "_")}.pdf`);
+    try { openDraftPrintView({ title: result.title, document: result.document, language: resultLanguage, simulated: result.source === "mock" }); }
+    catch (failure) { setError(failure instanceof Error ? failure.message : "Could not open the print view. Your draft is retained."); }
   }
 
   return (
@@ -141,67 +118,67 @@ export default function DraftingCopilot() {
         </div>
 
         <div className="space-y-4">
-          <Field label="Document type">
+          <Field label={t("Document type")}>
             <select
               value={documentType}
               onChange={(e) => setDocumentType(e.target.value as DocumentType)}
-              className="input"
+              className="input-field"
             >
               {DOC_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
-                  {o.label}
+                  {t(o.label)}
                 </option>
               ))}
             </select>
           </Field>
 
-          <Field label="Client name">
+          <Field label={t("Client name")}>
             <input
               value={clientName}
               onChange={(e) => setClientName(e.target.value)}
               placeholder="e.g. Ramesh Kumar"
-              className="input"
+              className="input-field"
             />
           </Field>
 
-          <Field label="Issue / matter">
+          <Field label={t("Issue / matter")}>
             <textarea
               value={issue}
               onChange={(e) => setIssue(e.target.value)}
               rows={3}
               placeholder="e.g. Cheque bounce of ₹2,00,000 issued in Jan 2025"
-              className="input resize-none"
+              className="input-field resize-none"
             />
           </Field>
 
-          <Field label="Date">
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input" />
+          <Field label={t("Date")}>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input-field" />
           </Field>
 
-          <Field label="Additional notes (optional)">
+          <Field label={t("Additional notes (optional)")}>
             <textarea
               value={additionalNotes}
               onChange={(e) => setAdditionalNotes(e.target.value)}
               rows={2}
               placeholder="Any extra facts or grounds to include…"
-              className="input resize-none"
+              className="input-field resize-none"
             />
           </Field>
         </div>
 
-        <div className="mt-5"><AIConsent value={ai} /></div>
-        <button type="submit" disabled={busy || !ai.ready} className="btn-primary mt-4 w-full disabled:opacity-60">
+        <p className="mt-5 text-xs text-navy-500">{t("Submitted text is processed by external AI services. Avoid unnecessary personal details.")}</p>
+        <button type="submit" disabled={busy} className="btn-primary mt-4 w-full disabled:opacity-60">
           {busy ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" /> Drafting…
+              <Loader2 className="h-4 w-4 animate-spin" /> {t("Drafting…")}
             </>
           ) : (
             <>
-              <Wand2 className="h-4 w-4" /> Generate Draft
+              <Wand2 className="h-4 w-4" /> {t("Generate Draft")}
             </>
           )}
         </button>
-        {busy && <button type="button" onClick={() => request.current?.abort()} className="mt-2 rounded-lg border border-navy-200 py-2 text-sm text-navy-700">Cancel generation</button>}
+        {busy && <button type="button" onClick={() => request.current?.abort()} className="mt-2 rounded-lg border border-navy-200 py-2 text-sm text-navy-700">{t("Cancel generation")}</button>}
         {error && <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>}
       </form>
 
@@ -211,7 +188,7 @@ export default function DraftingCopilot() {
           <div className="flex items-center gap-2">
             <FileText className="h-4 w-4 text-gold-600" />
             <span className="text-sm font-semibold text-navy-800">
-              {result ? result.title : "Document Preview"}
+              {result ? result.title : t("Document Preview")}
             </span>
           </div>
           {result && (
@@ -221,12 +198,12 @@ export default function DraftingCopilot() {
                 className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-navy-600 hover:bg-navy-100"
               >
                 {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-                {copied ? "Copied" : "Copy"}
+                {copied ? t("Copied") : t("Copy")}
               </button>
               <button
                 onClick={downloadPdf}
                 className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-navy-600 hover:bg-navy-100"
-                title="Download as PDF"
+                title="Print or save as PDF"
               >
                 <Download className="h-3.5 w-3.5" /> PDF
               </button>
@@ -236,14 +213,13 @@ export default function DraftingCopilot() {
 
         <div className="flex-1 overflow-y-auto bg-navy-50/30 p-5" aria-live="polite">
           {busy && <p className="mb-4 flex items-center gap-2 text-sm text-navy-500"><Loader2 className="h-4 w-4 animate-spin text-gold-500" />{stage}</p>}
-          {partial && <article className="mb-5 rounded-xl border border-gold-200 bg-gold-50/50 p-4"><p className="mb-3 text-xs font-semibold text-gold-800">{busy ? "Draft in progress" : "Incomplete draft · not saved or exportable"}</p><pre className="whitespace-pre-wrap font-serif text-sm leading-relaxed text-navy-800">{partial}</pre></article>}
+          {partial && <article className="mb-5 rounded-xl border border-gold-200 bg-gold-50/50 p-4"><p className="mb-3 text-xs font-semibold text-gold-800">{busy ? "Draft in progress" : "Incomplete draft · not saved or exportable"}</p><pre className="whitespace-pre-wrap font-serif text-sm leading-relaxed text-navy-800">{toPlainText(partial)}</pre></article>}
           {result ? (
             <article className="prose-sm">
               {/* Source banner */}
               <div className="mb-3">
                 <SourceBadge source={result.source} />
                 <p className="mt-2 text-xs text-navy-500">Unreviewed AI draft · Check facts and applicable law before use.</p>
-                {result.metadata && <p className="mt-1 text-[11px] text-navy-500">{result.metadata.model} · First content {(result.metadata.firstResponseMs / 1000).toFixed(1)}s · Total {(result.metadata.totalMs / 1000).toFixed(1)}s</p>}
               </div>
               <pre className="whitespace-pre-wrap font-serif text-sm leading-relaxed text-navy-800">
                 {result.document}
@@ -260,23 +236,6 @@ export default function DraftingCopilot() {
           )}
         </div>
       </div>
-
-      {/* Tailwind input helper class, scoped inside this file via globals @apply */}
-      <style>{`
-        .input {
-          width: 100%;
-          border-radius: 0.75rem;
-          border: 1px solid #e2e8f0;
-          background: white;
-          padding: 0.625rem 0.75rem;
-          font-size: 0.875rem;
-          outline: none;
-        }
-        .input:focus {
-          border-color: #fbbf24;
-          box-shadow: 0 0 0 2px #fde68a;
-        }
-      `}</style>
     </div>
   );
 }
@@ -292,8 +251,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function SourceBadge({ source }: { source: string }) {
   const map: Record<string, { label: string; cls: string }> = {
-    nemotron: { label: "Nemotron", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200" },
-    gemini: { label: "Gemini", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200" },
+    nemotron: { label: "AI-generated", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200" },
+    gemini: { label: "AI-generated", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200" },
+    groq: { label: "AI-generated", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200" },
     mock: { label: "Demo mock", cls: "bg-amber-50 text-amber-700 ring-amber-200" },
   };
   const s = map[source] || { label: source, cls: "bg-navy-100 text-navy-700 ring-navy-200" };

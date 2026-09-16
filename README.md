@@ -18,14 +18,18 @@ Copy `.env.local.example` to `.env.local` only if no environment file exists. Ot
 ## Configuration
 
 - [Private case setup](docs/case-workspace-setup.md): Clerk authentication, Supabase database migrations, private document storage and verification.
-- [AI processing](docs/ai-resilience.md): existing Gemini/NVIDIA keys, actual fallback, consent, streaming and bounded request settings.
+- [Storage troubleshooting](docs/storage-troubleshooting.md): missing server keys, bucket setup, RLS checks and a real upload/download verification command.
+- [AI processing](docs/ai-resilience.md): Gemini → Groq fallback, language selection, streaming recovery and bounded request settings.
 - [OCR setup and repair](docs/ocr-repair.md): PDF/text extraction, OCR.space settings, supported formats, limits and live test results.
 - [Implementation and acceptance report](docs/IMPLEMENTATION-2026-09.md): baseline, design decisions, changes and verification limits.
 
-Sign-in uses Clerk, with the application linked through the Clerk CLI. Run `clerk env pull --app app_3JHTLaXuRwyZkxfGKzrrfkyEwiR --file .env.local` to obtain development keys without exposing them. Supabase stores cases and private files; it requires the supplied public URL/key, a server-only `SUPABASE_SECRET_KEY` (or legacy service role key), and both database migrations. Missing storage configuration produces setup guidance while sign-in and standalone tools remain available. Real AI requests require processor consent. Demo mode is explicitly selected and never substitutes for a failed live request.
+Sign-in uses Clerk, with the application linked through the Clerk CLI. Run `clerk env pull --app app_3JHTLaXuRwyZkxfGKzrrfkyEwiR --file .env.local` to obtain development keys without exposing them. Supabase stores cases and private files; the server needs the project URL, a server-only `SUPABASE_SECRET_KEY` (or legacy service role key), and both database migrations. Missing storage configuration produces setup guidance while sign-in and standalone tools remain available. AI tools run directly when submitted, with a short processor disclosure. Configure `GEMINI_API_KEY` and `GROQ_API_KEY` for primary and fallback generation; failures never produce a simulated success.
 
 ## Features
 
+- English, Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam and Punjabi in the shared interface, with matching AI response and voice languages. User documents and legal source quotes stay unchanged.
+- Persistent language and Light/Dark/System preferences, prominent Home controls, and a responsive global assistant that keeps its conversation across navigation.
+- Voice-origin replies read aloud automatically; typed prompts stay silent. Microphone/TTS availability depends on the browser and installed voices.
 - Notice analysis with plain-language summaries and unconfirmed source-based dates.
 - Text/voice chat, drafting with existing downloads, IPC–BNS mapping, legal aid, lawyer directory, advocate network, precedents, intake and review demos, action tracker and Lok Adalat information.
 - Authenticated cases with document originals/versions, SHA-256 comparison, selected collaboration permissions, source-linked chronology, persistent tasks, draft reviews and activity history.

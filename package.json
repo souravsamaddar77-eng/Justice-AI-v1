@@ -7,12 +7,16 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts tests/*.test.cjs"
+    "test": "tsx --test tests/*.test.ts tests/*.test.cjs",
+    "storage:check": "node scripts/check-storage.mjs",
+    "storage:setup": "node scripts/check-storage.mjs --create-bucket",
+    "storage:verify": "node scripts/check-storage.mjs --verify-upload"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.2",
     "@google/genai": "^1.0.0",
     "@napi-rs/canvas": "^1.0.9",
+    "@supabase/server": "^1.6.1",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.116.0",
     "fontkit": "^2.0.4",
