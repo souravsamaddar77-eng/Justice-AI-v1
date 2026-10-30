@@ -1,9 +1,9 @@
 import { isLanguage } from "@/lib/i18n";
 import { SPEECH_CHUNK_LENGTH } from "@/lib/chat-speech";
+import { geminiSpeechAudio } from "@/lib/speech-audio";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
-const MAX_AUDIO_BYTES = 4_000_000;
 const headers = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
 
 export async function POST(request: Request) {
@@ -21,14 +21,20 @@ export async function POST(request: Request) {
   try {
     const signal = AbortSignal.any([request.signal, AbortSignal.timeout(35000)]);
     let response: Response | undefined;
-    const models = ["gemini-3.8-flash-lite-tts", "gemini-3.8-flash-tts"];
+    let format: "pcm" | "wav" = "wav";
+    const models = ["gemini-3.8-flash-lite-tts", "gemini-2.5-flash-preview-tts"];
     for (const model of models) {
+      format = model === "gemini-2.5-flash-preview-tts" ? "pcm" : "wav";
       try {
-        response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+        const endpoint = format === "pcm" ? `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent` : "https://generativelanguage.googleapis.com/v1beta/interactions";
+        response = await fetch(endpoint, {
           method: "POST", cache: "no-store",
           headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
           signal,
-          body: JSON.stringify({
+          body: JSON.stringify(format === "pcm" ? {
+            contents: [{ parts: [{ text: `Read this text aloud exactly as written in language ${body.language}:\n\n${body.text.trim()}` }] }],
+            generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } },
+          } : {
             model,
             input: [{ type: "user_input", content: [{ type: "text", text: body.text.trim(), annotations: [{ type: "speech_metadata", style: `Read clearly and naturally in language ${body.language}.` }] }] }],
             response_format: { type: "audio" },
@@ -51,12 +57,8 @@ export async function POST(request: Request) {
       }
       return Response.json({ error: "Read-aloud is temporarily unavailable. Please retry." }, { status: 503, headers });
     }
-    const data = await response.json() as { status?: string; steps?: { type?: string; content?: { type?: string; mime_type?: string; data?: string }[] }[] };
-    const parts = data.steps?.filter(step => step.type === "model_output").flatMap(step => step.content ?? []).filter(part => part.type === "audio") ?? [];
-    if (data.status !== "completed" || parts.length !== 1 || parts[0].mime_type !== "audio/wav" || !parts[0].data || parts[0].data.length > Math.ceil(MAX_AUDIO_BYTES / 3) * 4) throw new Error("Invalid audio response");
-    const audio = Buffer.from(parts[0].data, "base64");
-    if (audio.length < 44 || audio.length > MAX_AUDIO_BYTES || audio.toString("ascii", 0, 4) !== "RIFF" || audio.toString("ascii", 8, 12) !== "WAVE") throw new Error("Invalid WAV audio");
-    return new Response(audio, { headers: { ...headers, "Content-Type": "audio/wav", "Content-Length": String(audio.length) } });
+    const audio = geminiSpeechAudio(await response.json(), format);
+    return new Response(new Uint8Array(audio), { headers: { ...headers, "Content-Type": "audio/wav", "Content-Length": String(audio.length) } });
   } catch {
     return Response.json({ error: "Read-aloud could not finish. Please retry." }, { status: request.signal.aborted ? 499 : 503, headers });
   }

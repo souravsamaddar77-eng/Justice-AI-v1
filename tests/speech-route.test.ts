@@ -8,6 +8,7 @@ afterEach(() => { globalThis.fetch = originalFetch; if (originalKey === undefine
 const request = (body: unknown, signal?: AbortSignal) => new Request("http://localhost/api/speech", { method: "POST", body: JSON.stringify(body), signal });
 const wav = () => { const buffer = Buffer.alloc(46); buffer.write("RIFF"); buffer.write("WAVE", 8); return buffer; };
 const upstream = (overrides: object = {}) => ({ status: "completed", steps: [{ type: "model_output", content: [{ type: "audio", mime_type: "audio/wav", data: wav().toString("base64") }] }], ...overrides });
+const pcmUpstream = (pcm = Buffer.from([1, 0, 2, 0])) => ({ candidates: [{ finishReason: "STOP", content: { parts: [{ inlineData: { mimeType: "audio/L16;codec=pcm;rate=24000", data: pcm.toString("base64") } }] } }] });
 
 test("speech route rejects invalid text and languages before contacting Google", async () => {
   let calls = 0; globalThis.fetch = async () => { calls++; return Response.json({}); };
@@ -56,13 +57,35 @@ test("provider errors never echo the secret or the reply text", async () => {
 test("speech generation switches models when the primary reaches its daily limit", async () => {
   process.env.GEMINI_API_KEY = "synthetic-key";
   const models: string[] = [];
-  globalThis.fetch = async (_url, init) => {
-    models.push(JSON.parse(init!.body as string).model);
-    return models.length === 1 ? Response.json({ error: "daily limit" }, { status: 429 }) : Response.json(upstream());
+  globalThis.fetch = async (url, init) => {
+    const body = JSON.parse(init!.body as string);
+    models.push(body.model ?? String(url).split("/").at(-1)!.split(":")[0]);
+    if (models.length === 1) return Response.json({ error: "daily limit" }, { status: 429 });
+    assert.match(body.contents[0].parts[0].text, /বাংলায় উত্তর।/);
+    assert.deepEqual(body.generationConfig.responseModalities, ["AUDIO"]);
+    return Response.json(pcmUpstream());
   };
   const response = await POST(request({ text: "বাংলায় উত্তর।", language: "bn" }));
   assert.equal(response.status, 200);
-  assert.deepEqual(models, ["gemini-3.8-flash-lite-tts", "gemini-3.8-flash-tts"]);
+  assert.deepEqual(models, ["gemini-3.8-flash-lite-tts", "gemini-2.5-flash-preview-tts"]);
+  const audio = Buffer.from(await response.arrayBuffer());
+  assert.equal(audio.toString("ascii", 0, 4), "RIFF");
+  assert.equal(audio.readUInt32LE(24), 24000);
+  assert.equal(audio.readUInt16LE(22), 1);
+  assert.equal(audio.readUInt16LE(34), 16);
+  assert.equal(audio.readUInt32LE(40), 4);
+  assert.deepEqual(audio.subarray(44), Buffer.from([1, 0, 2, 0]));
+});
+
+test("fallback refuses incomplete audio, unsafe content and invalid PCM rather than playing noise", async () => {
+  process.env.GEMINI_API_KEY = "synthetic-key";
+  const incomplete = pcmUpstream(); incomplete.candidates[0].finishReason = "MAX_TOKENS";
+  const wrongFormat = pcmUpstream(); wrongFormat.candidates[0].content.parts[0].inlineData.mimeType = "audio/L16;codec=pcm;rate=48000";
+  for (const payload of [incomplete, wrongFormat, pcmUpstream(Buffer.from([1])), { ...pcmUpstream(), promptFeedback: { blockReason: "SAFETY" } }]) {
+    let calls = 0;
+    globalThis.fetch = async () => ++calls === 1 ? Response.json({}, { status: 429 }) : Response.json(payload);
+    assert.equal((await POST(request({ text: "বাংলা", language: "bn" }))).status, 503);
+  }
 });
 
 test("both speech model limits produce a bounded retry header without leaking upstream details", async () => {
