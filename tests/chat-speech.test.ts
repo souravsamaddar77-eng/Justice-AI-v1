@@ -33,7 +33,7 @@ function harness(voices = [voice("en-IN")], fetcher?: typeof fetch, finishAudio 
     fetch: fetcher ?? (async (_url, init) => { requests.push(JSON.parse(init!.body as string)); return audioResponse(); }),
     createObjectURL: () => `blob:audio-${audios.length}`,
     revokeObjectURL: url => revoked.push(url),
-  }, state => states.push(state), () => errors.push("failed"));
+  }, state => states.push(state), reason => errors.push(reason ?? "failed"));
   return { player, states, errors, requests, spoken, audios, revoked, synthesis };
 }
 
@@ -94,6 +94,32 @@ test("a browser voice rejected at playback falls back to server audio", async ()
   assert.equal(h.spoken.length, 1);
   assert.equal(h.requests.length, 1);
   assert.deepEqual(h.errors, []);
+});
+
+test("replaying the same reply reuses session audio without another provider request", async () => {
+  const h = harness();
+  await h.player.play("বাংলায় উত্তর।", "bn");
+  await h.player.play("বাংলায় উত্তর।", "bn");
+  assert.equal(h.requests.length, 1);
+  assert.equal(h.audios.length, 2);
+  assert.equal(h.revoked.length, 2);
+  await h.player.play("বাংলায় উত্তর।", "hi");
+  assert.equal(h.requests.length, 2);
+});
+
+test("clearing a conversation or account also clears private cached audio", async () => {
+  const h = harness();
+  await h.player.play("বাংলায় উত্তর।", "bn");
+  h.player.clear();
+  await h.player.play("বাংলায় উত্তর।", "bn");
+  assert.equal(h.requests.length, 2);
+});
+
+test("provider usage limits are distinguishable from playback failures", async () => {
+  const h = harness(undefined, async () => Response.json({ code: "rate_limited" }, { status: 429 }));
+  await h.player.play("বাংলায় উত্তর।", "bn");
+  assert.deepEqual(h.errors, ["rate_limited"]);
+  assert.equal(h.states.at(-1), false);
 });
 
 test("stopping during voice discovery prevents delayed speech and server requests", async () => {

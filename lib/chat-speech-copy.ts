@@ -15,3 +15,18 @@ const disclosures: Record<Language, string> = {
 };
 
 export function speechDisclosure(language: Language) { return disclosures[language]; }
+
+const rateLimits: Record<Language, string> = {
+  en: "Read-aloud has reached its usage limit. Please try later.",
+  hi: "पढ़कर सुनाने की उपयोग सीमा पूरी हो गई है। बाद में कोशिश करें।",
+  bn: "পড়ে শোনানোর ব্যবহারের সীমা শেষ হয়েছে। পরে আবার চেষ্টা করুন।",
+  ta: "வாசித்துக் காட்டும் பயன்பாட்டு வரம்பை எட்டிவிட்டது. பின்னர் முயற்சிக்கவும்.",
+  te: "చదివి వినిపించే వినియోగ పరిమితి పూర్తయింది. తర్వాత ప్రయత్నించండి.",
+  mr: "वाचून दाखवण्याची वापर मर्यादा पूर्ण झाली आहे. नंतर प्रयत्न करा.",
+  gu: "વાંચી સંભળાવવાની ઉપયોગ મર્યાદા પૂરી થઈ છે. પછી ફરી પ્રયાસ કરો.",
+  kn: "ಓದಿ ಹೇಳುವ ಬಳಕೆಯ ಮಿತಿ ತಲುಪಿದೆ. ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+  ml: "വായിച്ചു കേൾപ്പിക്കുന്നതിന്റെ ഉപയോഗ പരിധി കഴിഞ്ഞു. പിന്നീട് ശ്രമിക്കുക.",
+  pa: "ਪੜ੍ਹ ਕੇ ਸੁਣਾਉਣ ਦੀ ਵਰਤੋਂ ਸੀਮਾ ਪੂਰੀ ਹੋ ਗਈ ਹੈ। ਬਾਅਦ ਵਿੱਚ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
+};
+
+export function speechRateLimitMessage(language: Language) { return rateLimits[language]; }

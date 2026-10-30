@@ -2,6 +2,8 @@ import { LANGUAGES, type Language } from "./i18n";
 import { toPlainText } from "./plain-text";
 
 export const SPEECH_CHUNK_LENGTH = 600;
+const MAX_CACHED_AUDIO_BYTES = 8_000_000;
+class SpeechRateLimitError extends Error {}
 const normalizeTag = (tag: string) => tag.replace(/_/g, "-").toLowerCase();
 
 export function selectSpeechVoice<T extends { lang: string }>(voices: readonly T[], language: Language): T | undefined {
@@ -62,8 +64,16 @@ interface SpeechHost {
 /** Owns both browser speech and server audio, including pending work and cleanup. */
 export class ChatSpeechPlayer {
   private current: AbortController | null = null;
+  private cache = new Map<string, Blob>();
+  private cacheBytes = 0;
 
-  constructor(private host: SpeechHost, private onState: (speaking: boolean) => void, private onError: () => void) {}
+  constructor(private host: SpeechHost, private onState: (speaking: boolean) => void, private onError: (reason?: "rate_limited") => void) {}
+
+  clear() {
+    this.stop();
+    this.cache.clear();
+    this.cacheBytes = 0;
+  }
 
   stop() {
     const previous = this.current;
@@ -94,8 +104,8 @@ export class ChatSpeechPlayer {
         // Never send Bengali text to an unrelated default (usually English) voice.
         await this.serverChunk(chunk, language, signal);
       }
-    } catch {
-      if (this.current === controller && !signal.aborted) this.onError();
+    } catch (error) {
+      if (this.current === controller && !signal.aborted) this.onError(error instanceof SpeechRateLimitError ? "rate_limited" : undefined);
     } finally {
       if (this.current === controller) this.stop();
     }
@@ -124,12 +134,29 @@ export class ChatSpeechPlayer {
   }
 
   private async serverChunk(text: string, language: Language, signal: AbortSignal) {
-    const response = await this.host.fetch("/api/speech", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, language }), signal,
-    });
-    if (!response.ok || !response.headers.get("Content-Type")?.startsWith("audio/wav")) throw new Error("Read-aloud unavailable");
-    const blob = await response.blob();
+    const cacheKey = `${language}\0${text}`;
+    let blob = this.cache.get(cacheKey);
+    if (blob) { this.cache.delete(cacheKey); this.cache.set(cacheKey, blob); }
+    else {
+      const response = await this.host.fetch("/api/speech", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, language }), signal,
+      });
+      if (response.status === 429) throw new SpeechRateLimitError();
+      if (!response.ok || !response.headers.get("Content-Type")?.startsWith("audio/wav")) throw new Error("Read-aloud unavailable");
+      blob = await response.blob();
+      signal.throwIfAborted();
+      // Keep audio only in this chat session, with bounded memory and no disk storage.
+      if (blob.size <= MAX_CACHED_AUDIO_BYTES) {
+        while (this.cacheBytes + blob.size > MAX_CACHED_AUDIO_BYTES && this.cache.size) {
+          const oldest = this.cache.keys().next().value!;
+          this.cacheBytes -= this.cache.get(oldest)!.size;
+          this.cache.delete(oldest);
+        }
+        this.cache.set(cacheKey, blob);
+        this.cacheBytes += blob.size;
+      }
+    }
     signal.throwIfAborted();
     const url = this.host.createObjectURL(blob);
     try {
@@ -148,7 +175,7 @@ export class ChatSpeechPlayer {
   }
 }
 
-export function createBrowserSpeechPlayer(onState: (speaking: boolean) => void, onError: () => void) {
+export function createBrowserSpeechPlayer(onState: (speaking: boolean) => void, onError: (reason?: "rate_limited") => void) {
   return new ChatSpeechPlayer({
     synthesis: "speechSynthesis" in window && "SpeechSynthesisUtterance" in window ? window.speechSynthesis : undefined,
     createUtterance: text => new SpeechSynthesisUtterance(text),

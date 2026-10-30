@@ -8,6 +8,7 @@ import { LANGUAGES, type Language } from "@/lib/i18n";
 import { chatCopy } from "@/lib/chat-copy";
 import { VoiceReplyGate, type PromptOrigin } from "@/lib/chat-voice";
 import { createBrowserSpeechPlayer, type ChatSpeechPlayer } from "@/lib/chat-speech";
+import { speechRateLimitMessage } from "@/lib/chat-speech-copy";
 import { readAIResponse } from "@/lib/ai-client";
 import { toPlainText } from "@/lib/plain-text";
 import type { ChatMessage, ChatResponseBody, SpeechRecognition } from "@/types";
@@ -52,10 +53,10 @@ function useChatSessionState(userId: string | null | undefined, isLoaded: boolea
   }, [stopReading]);
 
   useEffect(() => {
-    const player = createBrowserSpeechPlayer(setSpeaking, () => setError(chatCopy(languageRef.current).ttsError));
+    const player = createBrowserSpeechPlayer(setSpeaking, reason => setError(reason === "rate_limited" ? speechRateLimitMessage(languageRef.current) : chatCopy(languageRef.current).ttsError));
     speechPlayer.current = player;
     setTtsSupported(typeof Audio !== "undefined");
-    return () => { player.stop(); speechPlayer.current = null; };
+    return () => { player.clear(); speechPlayer.current = null; };
   }, []);
 
   useEffect(() => {
@@ -177,6 +178,7 @@ function useChatSessionState(userId: string | null | undefined, isLoaded: boolea
 
   function clear() {
     cancel();
+    speechPlayer.current?.clear();
     request.current = null;
     acceptingTranscript.current = false;
     recognition.current?.abort();

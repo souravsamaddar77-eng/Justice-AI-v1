@@ -49,8 +49,39 @@ test("provider errors never echo the secret or the reply text", async () => {
   process.env.GEMINI_API_KEY = "synthetic-server-secret";
   globalThis.fetch = async () => Response.json({ error: "synthetic-server-secret sensitive reply" }, { status: 429 });
   const response = await POST(request({ text: "sensitive reply", language: "bn" }));
-  assert.equal(response.status, 503);
+  assert.equal(response.status, 429);
   assert.doesNotMatch(await response.text(), /synthetic-server-secret|sensitive reply/);
+});
+
+test("speech generation switches models when the primary reaches its daily limit", async () => {
+  process.env.GEMINI_API_KEY = "synthetic-key";
+  const models: string[] = [];
+  globalThis.fetch = async (_url, init) => {
+    models.push(JSON.parse(init!.body as string).model);
+    return models.length === 1 ? Response.json({ error: "daily limit" }, { status: 429 }) : Response.json(upstream());
+  };
+  const response = await POST(request({ text: "বাংলায় উত্তর।", language: "bn" }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(models, ["gemini-3.8-flash-lite-tts", "gemini-3.8-flash-tts"]);
+});
+
+test("both speech model limits produce a bounded retry header without leaking upstream details", async () => {
+  process.env.GEMINI_API_KEY = "synthetic-key";
+  globalThis.fetch = async () => Response.json({ error: "sensitive upstream details" }, { status: 429, headers: { "Retry-After": "40000" } });
+  const response = await POST(request({ text: "বাংলা", language: "bn" }));
+  assert.equal(response.status, 429);
+  assert.equal(response.headers.get("Retry-After"), "40000");
+  assert.equal((await response.json()).code, "rate_limited");
+});
+
+test("credential or content rejections do not switch speech models", async () => {
+  process.env.GEMINI_API_KEY = "synthetic-key";
+  for (const status of [401, 403, 422]) {
+    let calls = 0;
+    globalThis.fetch = async () => { calls++; return Response.json({ error: "rejected" }, { status }); };
+    assert.equal((await POST(request({ text: "বাংলা", language: "bn" }))).status, 503);
+    assert.equal(calls, 1);
+  }
 });
 
 test("malformed, partial, non-WAV and oversized provider audio is never served", async () => {

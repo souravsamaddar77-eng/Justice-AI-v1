@@ -19,20 +19,38 @@ export async function POST(request: Request) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return Response.json({ error: "Server read-aloud is not configured." }, { status: 503, headers });
   try {
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
-      method: "POST", cache: "no-store",
-      headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
-      signal: AbortSignal.any([request.signal, AbortSignal.timeout(35000)]),
-      body: JSON.stringify({
-        model: "gemini-3.8-flash-lite-tts",
-        input: [{ type: "user_input", content: [{ type: "text", text: body.text.trim(), annotations: [{ type: "speech_metadata", style: `Read clearly and naturally in language ${body.language}.` }] }] }],
-        response_format: { type: "audio" },
-        generation_config: { speech_config: [{ voice: "Kore" }] },
-        store: false,
-      }),
-    });
+    const signal = AbortSignal.any([request.signal, AbortSignal.timeout(35000)]);
+    let response: Response | undefined;
+    const models = ["gemini-3.8-flash-lite-tts", "gemini-3.8-flash-tts"];
+    for (const model of models) {
+      try {
+        response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+          method: "POST", cache: "no-store",
+          headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
+          signal,
+          body: JSON.stringify({
+            model,
+            input: [{ type: "user_input", content: [{ type: "text", text: body.text.trim(), annotations: [{ type: "speech_metadata", style: `Read clearly and naturally in language ${body.language}.` }] }] }],
+            response_format: { type: "audio" },
+            generation_config: { speech_config: [{ voice: "Kore" }] },
+            store: false,
+          }),
+        });
+      } catch (error) {
+        if (signal.aborted || model === models.at(-1)) throw error;
+        continue;
+      }
+      if (response.ok || (response.status !== 429 && response.status < 500)) break;
+    }
     // Do not expose upstream errors, which may contain the submitted reply.
-    if (!response.ok) return Response.json({ error: "Read-aloud is temporarily unavailable. Please retry." }, { status: 503, headers });
+    if (!response?.ok) {
+      if (response?.status === 429) {
+        const retry = response.headers.get("Retry-After") ?? "60";
+        const seconds = /^\d+$/.test(retry) ? Math.min(86400, Math.max(1, Number(retry))) : 60;
+        return Response.json({ error: "Read-aloud has reached its usage limit. Please try later.", code: "rate_limited" }, { status: 429, headers: { ...headers, "Retry-After": String(seconds) } });
+      }
+      return Response.json({ error: "Read-aloud is temporarily unavailable. Please retry." }, { status: 503, headers });
+    }
     const data = await response.json() as { status?: string; steps?: { type?: string; content?: { type?: string; mime_type?: string; data?: string }[] }[] };
     const parts = data.steps?.filter(step => step.type === "model_output").flatMap(step => step.content ?? []).filter(part => part.type === "audio") ?? [];
     if (data.status !== "completed" || parts.length !== 1 || parts[0].mime_type !== "audio/wav" || !parts[0].data || parts[0].data.length > Math.ceil(MAX_AUDIO_BYTES / 3) * 4) throw new Error("Invalid audio response");
