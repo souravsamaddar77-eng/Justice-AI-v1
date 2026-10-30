@@ -7,6 +7,7 @@ import SaveToCase from "@/components/SaveToCase";
 import { usePreferences } from "@/components/PreferencesProvider";
 import { LANGUAGES, type Language } from "@/lib/i18n";
 import { chatCopy, chatSuggestions } from "@/lib/chat-copy";
+import { speechDisclosure } from "@/lib/chat-speech-copy";
 import { toPlainText } from "@/lib/plain-text";
 import { useChatSession } from "./ChatSessionProvider";
 import "./chat.css";
@@ -66,6 +67,7 @@ export default function ChatExperience({ compact = false, active = true }: { com
         {chat.busy ? <button type="button" className="justice-chat-send" onClick={chat.cancel}><Square size={15} />{copy.stop}</button> : <button type="submit" className="justice-chat-send" disabled={!chat.input.trim() || chat.listening}><Send size={15} />{copy.send}</button>}
       </div>
       <p id={`${id}-voice-hint`} className="justice-chat-hint">{chat.origin === "voice" && !chat.listening ? copy.review : copy.voiceHint}</p>
+      <p className="justice-chat-hint">{speechDisclosure(language)}</p>
     </form>
     {!compact && <div className="justice-chat-footnote">{chat.messages.length > 0 && <SaveToCase kind="chat" title={copy.saveTitle} content={chat.messages.map(message => `${message.role}: ${message.content}`).join("\n\n")} metadata={{ tool: "chat", language, ai: chat.messages.at(-1)?.result?.metadata }} />}<p>{copy.disclaimer}</p></div>}
   </div>;

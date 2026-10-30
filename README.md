@@ -29,7 +29,7 @@ Sign-in uses Clerk, with the application linked through the Clerk CLI. Run `cler
 
 - English, Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam and Punjabi in the shared interface, with matching AI response and voice languages. User documents and legal source quotes stay unchanged.
 - Persistent language and Light/Dark/System preferences, prominent Home controls, and a responsive global assistant that keeps its conversation across navigation.
-- Voice-origin replies read aloud automatically; typed prompts stay silent. Microphone/TTS availability depends on the browser and installed voices.
+- Voice-origin replies read aloud automatically; typed prompts stay silent until you choose Read response aloud. Read-aloud waits for browser voices and accepts regional variants such as Bengali `bn-IN` and `bn-BD`. If a matching voice is missing or fails, the server generates audio through the existing `GEMINI_API_KEY` using Gemini Flash-Lite TTS. No additional key is required. This fallback needs internet access and uses the Google account's speech quota/billing. Microphone availability still depends on the browser.
 - Notice analysis with plain-language summaries and unconfirmed source-based dates.
 - Text/voice chat, drafting with existing downloads, IPC–BNS mapping, legal aid, lawyer directory, advocate network, precedents, intake and review demos, action tracker and Lok Adalat information.
 - Authenticated cases with document originals/versions, SHA-256 comparison, selected collaboration permissions, source-linked chronology, persistent tasks, draft reviews and activity history.

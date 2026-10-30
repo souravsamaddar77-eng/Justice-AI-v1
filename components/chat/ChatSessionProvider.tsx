@@ -7,6 +7,7 @@ import { usePreferences } from "@/components/PreferencesProvider";
 import { LANGUAGES, type Language } from "@/lib/i18n";
 import { chatCopy } from "@/lib/chat-copy";
 import { VoiceReplyGate, type PromptOrigin } from "@/lib/chat-voice";
+import { createBrowserSpeechPlayer, type ChatSpeechPlayer } from "@/lib/chat-speech";
 import { readAIResponse } from "@/lib/ai-client";
 import { toPlainText } from "@/lib/plain-text";
 import type { ChatMessage, ChatResponseBody, SpeechRecognition } from "@/types";
@@ -31,15 +32,14 @@ function useChatSessionState(userId: string | null | undefined, isLoaded: boolea
   const recognition = useRef<SpeechRecognition | null>(null);
   const acceptingTranscript = useRef(false);
   const account = useRef<string | null | undefined>(undefined);
-  const utterance = useRef<SpeechSynthesisUtterance | null>(null);
+  const speechPlayer = useRef<ChatSpeechPlayer | null>(null);
   const gate = useRef(new VoiceReplyGate());
   const languageRef = useRef(language);
   languageRef.current = language;
 
   const stopReading = useCallback(() => {
     gate.current.invalidate();
-    utterance.current = null;
-    window.speechSynthesis?.cancel();
+    speechPlayer.current?.stop();
     setSpeaking(false);
   }, []);
 
@@ -52,10 +52,16 @@ function useChatSessionState(userId: string | null | undefined, isLoaded: boolea
   }, [stopReading]);
 
   useEffect(() => {
+    const player = createBrowserSpeechPlayer(setSpeaking, () => setError(chatCopy(languageRef.current).ttsError));
+    speechPlayer.current = player;
+    setTtsSupported(typeof Audio !== "undefined");
+    return () => { player.stop(); speechPlayer.current = null; };
+  }, []);
+
+  useEffect(() => {
     const browser = window as unknown as { SpeechRecognition?: new () => SpeechRecognition; webkitSpeechRecognition?: new () => SpeechRecognition };
     const Constructor = browser.SpeechRecognition || browser.webkitSpeechRecognition;
     setSpeechSupported(Boolean(Constructor));
-    setTtsSupported("speechSynthesis" in window && "SpeechSynthesisUtterance" in window);
     if (!Constructor) return;
     const engine = new Constructor();
     engine.lang = LANGUAGES.find(item => item.code === language)!.speechCode;
@@ -96,8 +102,7 @@ function useChatSessionState(userId: string | null | undefined, isLoaded: boolea
     gate.current.invalidate();
     request.current?.abort();
     request.current = null;
-    utterance.current = null;
-    window.speechSynthesis?.cancel();
+    speechPlayer.current?.stop();
   }, []);
 
   function editInput(value: string) {
@@ -108,29 +113,12 @@ function useChatSessionState(userId: string | null | undefined, isLoaded: boolea
   }
 
   function speak(text: string, responseLanguage: Language = language) {
-    if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
+    if (!speechPlayer.current) {
       setError(chatCopy(languageRef.current).ttsError);
       return;
     }
-    utterance.current = null;
-    window.speechSynthesis.cancel();
-    const speech = new SpeechSynthesisUtterance(toPlainText(text));
-    speech.lang = LANGUAGES.find(item => item.code === responseLanguage)!.speechCode;
-    speech.rate = .95;
-    const voices = window.speechSynthesis.getVoices();
-    const voice = voices.find(item => item.lang.toLowerCase() === speech.lang.toLowerCase()) || voices.find(item => item.lang.split("-")[0] === responseLanguage);
-    if (voice) speech.voice = voice;
-    utterance.current = speech;
-    speech.onstart = () => { if (utterance.current === speech) setSpeaking(true); };
-    speech.onend = () => { if (utterance.current === speech) { utterance.current = null; setSpeaking(false); } };
-    speech.onerror = event => {
-      if (utterance.current !== speech) return;
-      utterance.current = null;
-      setSpeaking(false);
-      if (event.error !== "canceled" && event.error !== "interrupted") setError(chatCopy(languageRef.current).ttsError);
-    };
-    setSpeaking(true);
-    window.speechSynthesis.speak(speech);
+    setError("");
+    void speechPlayer.current.play(text, responseLanguage);
   }
 
   async function send() {
@@ -141,8 +129,7 @@ function useChatSessionState(userId: string | null | undefined, isLoaded: boolea
     const controller = new AbortController();
     request.current = controller;
     // Silence a previous reply without changing this prompt's voice-origin ticket.
-    utterance.current = null;
-    window.speechSynthesis?.cancel();
+    speechPlayer.current?.stop();
     setSpeaking(false);
     setBusy(true);
     setError("");
